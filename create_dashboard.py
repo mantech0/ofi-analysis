@@ -95,6 +95,7 @@ def fetch_portfolio() -> list:
         ci_price = first_col("購入価格", "平均取得価格")
         ci_sell  = first_col("売却日付")
         ci_acct  = first_col("口座区分")
+        ci_memo  = first_col("購入メモ", "メモ")
 
         if ci_code < 0 or ci_name < 0:
             print(f"  コード/銘柄列が見つかりません。列一覧: {headers}")
@@ -114,6 +115,7 @@ def fetch_portfolio() -> list:
             price_str = _clean_num(get(row, ci_price))
             sell_date = get(row, ci_sell)
             account   = get(row, ci_acct)
+            memo      = get(row, ci_memo)
 
             if not code or not name:
                 continue
@@ -142,6 +144,7 @@ def fetch_portfolio() -> list:
                     "code": code, "name": name,
                     "qty": qty, "price": price,
                     "currency": currency, "account": account,
+                    "memo": memo[:30] + "…" if len(memo) > 30 else memo,
                 }
 
         result = list(holdings.values())
@@ -166,6 +169,8 @@ def portfolio_to_text(holdings: list) -> str:
         line  = f"{h['code']} {h['name']}: {qty}株 @{sym}{price_str}"
         if h.get("account"):
             line += f" [{h['account']}]"
+        if h.get("memo"):
+            line += f" ← {h['memo']}"
         lines.append(line)
     return "\n".join(lines)
 
