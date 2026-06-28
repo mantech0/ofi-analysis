@@ -1,0 +1,35 @@
+name: OFI ダッシュボード更新
+
+on:
+  schedule:
+    # 毎朝 8:00 JST (= 23:00 UTC 前日) 平日のみ
+    - cron: '0 23 * * 0-4'
+  workflow_dispatch:
+    # スマホから手動でも実行できるようにする
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存パッケージをインストール
+        run: pip install -r requirements.txt
+
+      - name: ダッシュボードを生成
+        run: python create_dashboard.py
+
+      - name: GitHub Pages にデプロイ
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          commit_message: '📊 ダッシュボード自動更新'

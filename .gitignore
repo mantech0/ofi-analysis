@@ -1,0 +1,7 @@
+dist/
+__pycache__/
+*.pyc
+*.csv
+*.html
+.DS_Store
+alpaca_config.py

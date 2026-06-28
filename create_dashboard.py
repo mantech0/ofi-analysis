@@ -1,0 +1,614 @@
+"""
+create_dashboard.py
+全銘柄 OFI ダッシュボード生成
+
+出力先: ./dist/
+  index.html        ← 銘柄一覧・全銘柄ブリーフィングコピー
+  mu.html           ← Micron (MU)
+  kioxia.html       ← Kioxia (285A.T)
+  1969.html         ← 高砂熱化学
+  6503.html         ← 三菱電機
+  8002.html         ← 丸紅
+  8053.html         ← 住友商事
+"""
+
+import json
+import pathlib
+from datetime import datetime, timezone
+
+import pandas as pd
+
+from OFI_calculator import calculate_ofi
+from OFI_daily_calculator import calculate_daily_ofi
+from OFI_slope_analyzer import analyze as intra_analyze
+from OFI_daily_slope_analyzer import analyze as daily_analyze
+from OFI_visualizer import build_chart
+from OFI_daily_visualizer import build_daily_chart
+from OFI_backtest import build_insight
+
+# ── 銘柄定義 ──────────────────────────────────────────────────────
+STOCKS = [
+    {"code": "MU",   "name": "マイクロン",  "ticker": "MU",     "market": "US"},
+    {"code": "285A", "name": "キオクシア",  "ticker": "285A.T", "market": "JP"},
+    {"code": "1969", "name": "高砂熱化学",  "ticker": "1969.T", "market": "JP"},
+    {"code": "6503", "name": "三菱電機",    "ticker": "6503.T", "market": "JP"},
+    {"code": "8002", "name": "丸紅",        "ticker": "8002.T", "market": "JP"},
+    {"code": "8053", "name": "住友商事",    "ticker": "8053.T", "market": "JP"},
+]
+
+OUT_DIR = pathlib.Path("dist")
+
+
+# ── データ取得 ─────────────────────────────────────────────────────
+def _ohlcv_to_ofi_input(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    eps = 1e-6
+    rng = (df["high"] - df["low"]).clip(lower=eps)
+    df["price"]      = df["close"]
+    df["bid_price"]  = ((df["close"] + df["low"])  / 2).round(4)
+    df["ask_price"]  = ((df["close"] + df["high"]) / 2).round(4)
+    df["bid_volume"] = (df["volume"] * (df["close"] - df["low"])  / rng).clip(lower=0).astype(int)
+    df["ask_volume"] = (df["volume"] * (df["high"] - df["close"]) / rng).clip(lower=0).astype(int)
+    return df
+
+
+def fetch_and_process(stock: dict) -> dict:
+    """1銘柄分のフィギュア＋示唆データを生成して返す"""
+    code   = stock["code"]
+    ticker = stock["ticker"]
+    market = stock["market"]
+    name   = stock["name"]
+
+    result = {"code": code, "name": name, "market": market}
+
+    # ── イントラデイ ──────────────────────────────────────────────
+    try:
+        if market == "US":
+            from fetch_mu_ohlc import fetch_and_derive
+            raw_i = fetch_and_derive(period="5d")
+        else:
+            from fetch_jp_stocks import fetch_intraday
+            raw_ohlcv = fetch_intraday(ticker, period="5d", interval="1m")
+            raw_i = _ohlcv_to_ofi_input(raw_ohlcv)
+
+        ofi_i = calculate_ofi(raw_i)
+        slope_i, _ = intra_analyze(ofi_i)
+        fig_i = build_chart(slope_i, market=market)
+        fig_i.update_layout(title_text=f"{code} {name} — 1分足 OFI 分析（30分・60分ウィンドウ）")
+        ins_i = build_insight(slope_i, timeframe="intraday", symbol=code)
+        result["fig_i"] = fig_i
+        result["ins_i"] = ins_i
+        print(f"    1分足: {len(slope_i)}本 | {ins_i['dominant']} | 連続{ins_i['consecutive']}回")
+    except Exception as e:
+        print(f"    1分足 エラー: {e}")
+        result["fig_i"] = None
+        result["ins_i"] = {"dominant": "取得エラー", "summary": str(e),
+                            "dominant_pct": 0, "ofi_dir": "−",
+                            "stealth_count": 0, "base_rate": 0,
+                            "consecutive": 0, "alert_n": 3, "alert_trig": False,
+                            "n_reason": "−", "backtest": {"n": 0},
+                            "forward_bars": 30, "entry": {}, "lookback": 60}
+
+    # ── 日足 ───────────────────────────────────────────────────────
+    try:
+        if market == "US":
+            from fetch_mu_ohlc import fetch_mu_daily
+            raw_d = fetch_mu_daily()
+        else:
+            from fetch_jp_stocks import fetch_daily
+            raw_d = fetch_daily(ticker, period="1y")
+
+        ofi_d = calculate_daily_ofi(raw_d)
+        slope_d, _ = daily_analyze(ofi_d)
+        fig_d = build_daily_chart(slope_d)
+        fig_d.update_layout(title_text=f"{code} {name} — 日足 OFI 分析（5日・20日ウィンドウ）")
+        ins_d = build_insight(slope_d, timeframe="daily", symbol=code)
+        result["fig_d"] = fig_d
+        result["ins_d"] = ins_d
+        bt = ins_d["backtest"]
+        print(f"    日足  : {len(slope_d)}日 | {ins_d['dominant']} | BT勝率{bt.get('win_rate','−')}%")
+    except Exception as e:
+        print(f"    日足 エラー: {e}")
+        result["fig_d"] = None
+        result["ins_d"] = {"dominant": "取得エラー", "summary": str(e),
+                            "dominant_pct": 0, "ofi_dir": "−",
+                            "stealth_count": 0, "base_rate": 0,
+                            "consecutive": 0, "alert_n": 3, "alert_trig": False,
+                            "n_reason": "−", "backtest": {"n": 0},
+                            "forward_bars": 5, "entry": {}, "lookback": 20}
+
+    return result
+
+
+# ── HTML 生成 ──────────────────────────────────────────────────────
+PHASE_COLOR = {
+    "ステルス買い (Stealth Buy) ⚡": "#FFD700",
+    "確認上昇 (Bullish)":           "#4CAF50",
+    "分配売り (Distribution)":       "#FF5722",
+    "確認下落 (Bearish)":            "#78909C",
+}
+
+COMMON_CSS = r"""
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #E0E0E0; }
+a { text-decoration: none; color: inherit; }
+.header {
+  background: #1A1A2E; padding: 12px 16px;
+  border-bottom: 1px solid #2A3A5C;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header h1 { font-size: 16px; font-weight: 600; }
+.back-btn {
+  background: #1E2A3A; color: #90CAF9; border: 1px solid #2A3A5C;
+  padding: 6px 12px; border-radius: 6px; font-size: 13px;
+}
+.header-right { display: flex; gap: 8px; align-items: center; }
+.updated-at { font-size: 11px; color: #374151; }
+.copy-btn {
+  background: #1B4332; color: #95D5B2; border: 1px solid #52B788;
+  padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-weight: 500;
+}
+.copy-btn.copied { background: #1565C0; color: #fff; border-color: #42A5F5; }
+.help-btn {
+  background: #243454; color: #90CAF9; border: 1px solid #3A5A8C;
+  padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.tabs {
+  display: flex; gap: 4px; padding: 8px 12px;
+  background: #161B27; border-bottom: 1px solid #2A3A5C;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.tab {
+  padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 500; background: #1E2A3A; color: #90A4AE;
+  white-space: nowrap; flex-shrink: 0;
+}
+.tab.active { background: #1565C0; color: #fff; }
+.insight-box { background: #161B27; border-bottom: 1px solid #2A3A5C; padding: 10px 14px; display: none; }
+.insight-box.active { display: block; }
+.insight-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 8px; }
+@media (min-width: 640px) { .insight-grid { grid-template-columns: repeat(4,1fr); } }
+.ins-card { background: #1A1A2E; border-radius: 6px; padding: 8px 10px; border-left: 3px solid #2A3A5C; }
+.ins-label { font-size: 10px; color: #546E7A; text-transform: uppercase; margin-bottom: 3px; }
+.ins-val { font-size: 13px; font-weight: 500; line-height: 1.3; }
+.ins-sub { font-size: 11px; color: #78909C; margin-top: 2px; }
+.insight-row2 { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.alert-on {
+  background: linear-gradient(135deg,#1B4332,#2D6A4F); border: 1px solid #52B788;
+  border-radius: 6px; padding: 6px 12px; color: #95D5B2; font-weight: 600; font-size: 13px;
+}
+.alert-off { background: #161B27; border: 1px solid #2A3A5C; border-radius: 6px; padding: 6px 12px; color: #4A5568; font-size: 12px; }
+.n-reason { font-size: 10px; color: #546E7A; margin-top: 2px; }
+.insight-summary {
+  background: #1E2A3A; border-left: 3px solid #90CAF9;
+  border-radius: 0 6px 6px 0; padding: 7px 12px;
+  font-size: 13px; color: #B0BEC5; margin-top: 6px; line-height: 1.6;
+}
+.ofi-up { color: #4CAF50; } .ofi-down { color: #FF5722; }
+.chart-wrap { display: none; }
+.chart-wrap.active { display: block; }
+.status-bar { background: #161B27; padding: 4px 16px; color: #374151; font-size: 11px; border-top: 1px solid #1E2A3A; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: #1A1A2E; border: 1px solid #2A3A5C; border-radius: 10px; padding: 24px; max-width: 640px; width: 92%; max-height: 85vh; overflow-y: auto; position: relative; }
+.modal h2 { font-size: 15px; margin-bottom: 14px; color: #90CAF9; }
+.modal h3 { font-size: 12px; margin: 14px 0 6px; color: #78909C; text-transform: uppercase; }
+.modal-close { position: absolute; top: 12px; right: 14px; background: none; border: none; color: #546E7A; font-size: 20px; cursor: pointer; }
+.guide-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
+.guide-table th,.guide-table td { padding: 7px 10px; text-align: left; border-bottom: 1px solid #2A3A5C; }
+.guide-table th { color: #546E7A; }
+.guide-table td { color: #B0BEC5; }
+.cluster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.cluster-card { background: #16213E; border-radius: 6px; padding: 9px 12px; }
+.cluster-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.cluster-desc { font-size: 12px; color: #78909C; }
+"""
+
+HELP_MODAL_HTML = r"""
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeHelp()">✕</button>
+    <h2>OFI チャートの見方ガイド</h2>
+    <h3>クラスタ 4 種の意味</h3>
+    <div class="cluster-grid">
+      <div class="cluster-card"><div class="cluster-name" style="color:#FFD700">⚡ ステルス買い</div><div class="cluster-desc">価格↓ OFI↑ — 機関が静かに仕込み中。最良エントリー候補</div></div>
+      <div class="cluster-card"><div class="cluster-name" style="color:#4CAF50">▲ 確認上昇</div><div class="cluster-desc">価格↑ OFI↑ — 素直な上昇。乗れるが出遅れ気味</div></div>
+      <div class="cluster-card"><div class="cluster-name" style="color:#FF5722">▼ 分配売り</div><div class="cluster-desc">価格↑ OFI↓ — 機関が高値で売り逃げ中。買わない／利確</div></div>
+      <div class="cluster-card"><div class="cluster-name" style="color:#78909C">▼ 確認下落</div><div class="cluster-desc">価格↓ OFI↓ — 素直な下落。様子見</div></div>
+    </div>
+    <h3>日中の判断フロー</h3>
+    <table class="guide-table">
+      <thead><tr><th>状況</th><th>読み方</th><th>アクション</th></tr></thead>
+      <tbody>
+        <tr><td>価格↓ + OFI↑ + ⚡</td><td>機関が静かに拾っている</td><td style="color:#FFD700">エントリー検討</td></tr>
+        <tr><td>価格↑ + OFI↓</td><td>機関が売り逃げ中</td><td>乗らない / 利確</td></tr>
+        <tr><td>両方↑</td><td>素直な上昇</td><td>出遅れ気味</td></tr>
+        <tr><td>両方↓</td><td>素直な下落</td><td>様子見</td></tr>
+      </tbody>
+    </table>
+    <h3>示唆ボックスの読み方</h3>
+    <table class="guide-table">
+      <tbody>
+        <tr><td><b>現在フェーズ</b></td><td>直近60本(1分足)/20本(日足) の最頻クラスタ</td></tr>
+        <tr><td><b>累積OFI方向</b></td><td>直近30本のOFI変化方向。価格と逆なら注目</td></tr>
+        <tr><td><b>バックテスト</b></td><td>過去シグナル後30分後(1分足)/5日後(日足) の勝率・平均リターン</td></tr>
+        <tr><td><b>エントリー条件</b></td><td>シグナル時OFI変化中央値 / 価格変化25パーセンタイルから算出</td></tr>
+        <tr><td><b>アラート閾値 N</b></td><td>統計的に偽陽性が1日0.3回以内になる最小連続回数</td></tr>
+      </tbody>
+    </table>
+    <h3>注意事項</h3>
+    <table class="guide-table">
+      <tbody>
+        <tr><td>データ</td><td>OHLC近似版 (bid/ask 実板なし)</td></tr>
+        <tr><td>単体シグナル</td><td>OFI だけでは「いつ上がるか」は不明。他の根拠と組み合わせること</td></tr>
+        <tr><td>バックテスト</td><td>過去の集計であり将来を保証しない</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+"""
+
+COMMON_JS = r"""
+const PHASE_COLOR = {
+  "ステルス買い (Stealth Buy) ⚡": "#FFD700",
+  "確認上昇 (Bullish)": "#4CAF50",
+  "分配売り (Distribution)": "#FF5722",
+  "確認下落 (Bearish)": "#78909C",
+};
+function renderInsight(id, ins) {
+  const el = document.getElementById('ins_' + id);
+  if (!el || !ins) return;
+  const pc = PHASE_COLOR[ins.dominant] || '#90A4AE';
+  const bt = ins.backtest || {};
+  const ec = ins.entry   || {};
+  const fwd = ins.forward_bars || 30;
+  const btText = bt.n > 0
+    ? `勝率 <b>${bt.win_rate}%</b> / 平均 <b style="color:${bt.avg_ret>=0?'#4CAF50':'#FF5722'}">${bt.avg_ret>=0?'+':''}${bt.avg_ret}%</b> <span style="color:#546E7A">(N=${bt.n})</span>`
+    : '<span style="color:#546E7A">データ不足</span>';
+  const ecText = ec.n > 0
+    ? `OFI変化 <b>+${Number(ec.ofi_x).toLocaleString()}</b>以上 かつ 価格 <b>-${ec.price_y}%</b>以内`
+    : '<span style="color:#546E7A">データ不足</span>';
+  const alertHTML = ins.alert_trig
+    ? `<div class="alert-on">⚡ アラート発動! 連続<b>${ins.consecutive}</b>回 (閾値${ins.alert_n}回)</div>`
+    : `<div class="alert-off">⊘ 未発動 — 連続${ins.consecutive}/${ins.alert_n}回<div class="n-reason">${ins.n_reason||''}</div></div>`;
+  el.innerHTML = `
+<div class="insight-grid">
+  <div class="ins-card" style="border-left-color:${pc}">
+    <div class="ins-label">現在フェーズ</div>
+    <div class="ins-val" style="color:${pc}">${ins.dominant}</div>
+    <div class="ins-sub">${ins.dominant_pct}% / ${ins.lookback||60}本</div>
+  </div>
+  <div class="ins-card">
+    <div class="ins-label">累積OFI方向</div>
+    <div class="ins-val ${ins.ofi_dir&&ins.ofi_dir.includes('↑')?'ofi-up':'ofi-down'}">${ins.ofi_dir||'−'}</div>
+    <div class="ins-sub">ステルス買い ${ins.stealth_count}回 (${ins.base_rate}%)</div>
+  </div>
+  <div class="ins-card">
+    <div class="ins-label">バックテスト(${fwd}本後)</div>
+    <div class="ins-val" style="font-size:12px">${btText}</div>
+    <div class="ins-sub">中央値: ${bt.n>0?(bt.med_ret>=0?'+':'')+bt.med_ret+'%':'−'}</div>
+  </div>
+  <div class="ins-card">
+    <div class="ins-label">エントリー条件</div>
+    <div class="ins-val" style="font-size:12px">${ecText}</div>
+    <div class="ins-sub">シグナル${ec.n||0}件から算出</div>
+  </div>
+</div>
+<div class="insight-row2">${alertHTML}</div>
+<div class="insight-summary">💡 ${ins.summary||'分析中...'}</div>`;
+}
+function openHelp()  { document.getElementById('modal').classList.add('open'); }
+function closeHelp() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeHelp(); });
+"""
+
+
+def _make_copy_js(ins_i: dict, ins_d: dict, code: str, name: str) -> str:
+    return f"""
+function buildBriefing() {{
+  const now = new Date().toLocaleString('ja-JP', {{timeZone:'Asia/Tokyo'}});
+  const ins_i = {json.dumps(ins_i, ensure_ascii=False)};
+  const ins_d = {json.dumps(ins_d, ensure_ascii=False)};
+  let t = `=== OFI分析ブリーフィング [{code} {name}] ===\\n生成: ${{now}}\\n\\n`;
+  for (const [label, ins] of [['1分足', ins_i], ['日足', ins_d]]) {{
+    t += `【${{label}}】\\n`;
+    t += `フェーズ: ${{ins.dominant}} (${{ins.dominant_pct}}%)\\n`;
+    t += `累積OFI: ${{ins.ofi_dir}}\\n`;
+    t += `ステルス買い: ${{ins.base_rate}}%発生率 / 連続${{ins.consecutive}}回 (閾値${{ins.alert_n}}回)\\n`;
+    const bt = ins.backtest || {{}};
+    if (bt.n > 0) t += `バックテスト(${{ins.forward_bars}}本後): 勝率${{bt.win_rate}}% / 平均${{bt.avg_ret>=0?'+':''}}${{bt.avg_ret}}%\\n`;
+    const ec = ins.entry || {{}};
+    if (ec.n > 0) t += `エントリー条件: OFI変化+${{ec.ofi_x}}以上 かつ 価格-${{ec.price_y}}%以内\\n`;
+    if (ins.alert_trig) t += `⚡ アラート発動中!\\n`;
+    t += `示唆: ${{ins.summary}}\\n\\n`;
+  }}
+  t += `---\\n以上を踏まえて今日の売買判断について壁打ちしたい。`;
+  return t;
+}}
+function copyBriefing() {{
+  const text = buildBriefing();
+  navigator.clipboard.writeText(text).then(() => {{
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✅ コピー完了!';
+    btn.classList.add('copied');
+    setTimeout(() => {{ btn.textContent = '📋 コピー'; btn.classList.remove('copied'); }}, 2500);
+  }}).catch(() => {{
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    alert('コピーしました！');
+  }});
+}}
+"""
+
+
+def make_stock_page(stock: dict, result: dict, build_time: str) -> str:
+    code   = stock["code"]
+    name   = stock["name"]
+    ins_i  = result["ins_i"]
+    ins_d  = result["ins_d"]
+    fig_i  = result.get("fig_i")
+    fig_d  = result.get("fig_d")
+
+    fig_i_json = fig_i.to_json() if fig_i else "null"
+    fig_d_json = fig_d.to_json() if fig_d else "null"
+    ins_i_json = json.dumps(ins_i, ensure_ascii=False)
+    ins_d_json = json.dumps(ins_d, ensure_ascii=False)
+
+    return f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{code} {name} — OFI分析</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+{COMMON_CSS}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="back-btn">← 一覧</a>
+    <h1>{code} {name}</h1>
+  </div>
+  <div class="header-right">
+    <span class="updated-at" id="updated-at"></span>
+    <button class="copy-btn" id="copy-btn" onclick="copyBriefing()">📋 コピー</button>
+    <button class="help-btn" onclick="openHelp()">?</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('i',this)">1分足</button>
+  <button class="tab" onclick="showTab('d',this)">日足</button>
+</div>
+
+<div id="ins_i" class="insight-box active"></div>
+<div id="ins_d" class="insight-box"></div>
+<div id="chart_i" class="chart-wrap active"><div id="plt_i"></div></div>
+<div id="chart_d" class="chart-wrap"><div id="plt_d"></div></div>
+
+<div class="status-bar">※ OHLC近似版 | Alpaca API 取得後に実板データへ差し替え予定</div>
+
+{HELP_MODAL_HTML}
+
+<script>
+{COMMON_JS}
+{_make_copy_js(ins_i, ins_d, code, name)}
+
+const ins_i = {ins_i_json};
+const ins_d = {ins_d_json};
+const fig_i = {fig_i_json};
+const fig_d = {fig_d_json};
+
+const rendered = {{}};
+function showTab(id, btn) {{
+  document.querySelectorAll('.chart-wrap,.insight-box').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+  document.getElementById('chart_' + id).classList.add('active');
+  document.getElementById('ins_' + id).classList.add('active');
+  btn.classList.add('active');
+  if (!rendered[id]) {{
+    const fig = id === 'i' ? fig_i : fig_d;
+    if (fig) Plotly.newPlot('plt_' + id, fig.data, fig.layout, {{responsive: true}});
+    rendered[id] = true;
+  }}
+}}
+
+renderInsight('i', ins_i);
+renderInsight('d', ins_d);
+if (fig_i) Plotly.newPlot('plt_i', fig_i.data, fig_i.layout, {{responsive: true}});
+rendered['i'] = true;
+
+document.getElementById('updated-at').textContent =
+  new Date('{build_time}').toLocaleString('ja-JP', {{timeZone: 'Asia/Tokyo'}});
+</script>
+</body>
+</html>"""
+
+
+def make_index_page(all_results: list, build_time: str) -> str:
+    # 銘柄カード HTML
+    cards_html = ""
+    for r in all_results:
+        code   = r["code"]
+        name   = r["name"]
+        ins_i  = r["ins_i"]
+        ins_d  = r["ins_d"]
+        pc_i   = PHASE_COLOR.get(ins_i.get("dominant", ""), "#90A4AE")
+        pc_d   = PHASE_COLOR.get(ins_d.get("dominant", ""), "#90A4AE")
+        flag   = "🇺🇸" if r["market"] == "US" else "🇯🇵"
+        alert  = "⚡" if ins_i.get("alert_trig") or ins_d.get("alert_trig") else ""
+        summary = ins_i.get("summary", "")[:60] + "…" if len(ins_i.get("summary","")) > 60 else ins_i.get("summary","")
+
+        cards_html += f"""
+<a href="{code.lower()}.html" class="stock-card">
+  <div class="card-header">
+    <span class="card-flag">{flag}</span>
+    <span class="card-code">{code}</span>
+    <span class="card-name">{name}</span>
+    <span class="card-alert">{alert}</span>
+  </div>
+  <div class="card-phases">
+    <div class="card-phase">
+      <span class="phase-label">1分足</span>
+      <span class="phase-val" style="color:{pc_i}">{ins_i.get('dominant','−')}</span>
+      <span class="phase-pct">({ins_i.get('dominant_pct',0)}%)</span>
+    </div>
+    <div class="card-phase">
+      <span class="phase-label">日足</span>
+      <span class="phase-val" style="color:{pc_d}">{ins_d.get('dominant','−')}</span>
+      <span class="phase-pct">({ins_d.get('dominant_pct',0)}%)</span>
+    </div>
+  </div>
+  <div class="card-summary">{summary}</div>
+</a>"""
+
+    # 全銘柄ブリーフィング用JS
+    all_ins_json = json.dumps(
+        [{"code": r["code"], "name": r["name"],
+          "ins_i": r["ins_i"], "ins_d": r["ins_d"]} for r in all_results],
+        ensure_ascii=False
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OFI ダッシュボード</title>
+<style>
+{COMMON_CSS}
+.page-title {{ font-size: 18px; font-weight: 700; }}
+.badge {{ background: #243454; color: #90CAF9; font-size: 11px; padding: 2px 8px; border-radius: 4px; }}
+.stock-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 12px; padding: 16px; }}
+.stock-card {{
+  background: #1A1A2E; border: 1px solid #2A3A5C; border-radius: 10px;
+  padding: 14px 16px; display: block; transition: 0.15s;
+}}
+.stock-card:hover, .stock-card:active {{ border-color: #4A6A9C; background: #1E2A3E; }}
+.card-header {{ display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }}
+.card-flag {{ font-size: 16px; }}
+.card-code {{ font-size: 16px; font-weight: 700; }}
+.card-name {{ font-size: 13px; color: #78909C; }}
+.card-alert {{ margin-left: auto; font-size: 16px; }}
+.card-phases {{ display: flex; gap: 12px; margin-bottom: 8px; }}
+.card-phase {{ flex: 1; background: #16213E; border-radius: 6px; padding: 6px 8px; }}
+.phase-label {{ font-size: 10px; color: #546E7A; display: block; margin-bottom: 3px; }}
+.phase-val {{ font-size: 12px; font-weight: 600; }}
+.phase-pct {{ font-size: 11px; color: #546E7A; margin-left: 4px; }}
+.card-summary {{ font-size: 12px; color: #78909C; line-height: 1.5; }}
+.copy-all-btn {{
+  background: #1B4332; color: #95D5B2; border: 1px solid #52B788;
+  padding: 8px 18px; border-radius: 8px; cursor: pointer;
+  font-size: 14px; font-weight: 600;
+}}
+.copy-all-btn.copied {{ background: #1565C0; color: #fff; border-color: #42A5F5; }}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <h1 class="page-title">OFI 分析</h1>
+    <span class="badge">6銘柄</span>
+    <span class="badge">OHLC近似</span>
+  </div>
+  <div class="header-right">
+    <span class="updated-at" id="updated-at"></span>
+    <button class="copy-all-btn" id="copy-all-btn" onclick="copyAll()">📋 全銘柄コピー</button>
+    <button class="help-btn" onclick="openHelp()">?</button>
+  </div>
+</div>
+
+<div class="stock-grid">
+{cards_html}
+</div>
+
+<div class="status-bar">タップで銘柄詳細へ | 毎朝 8:00 JST 自動更新</div>
+
+{HELP_MODAL_HTML}
+
+<script>
+{COMMON_JS}
+
+const allData = {all_ins_json};
+
+function copyAll() {{
+  const now = new Date().toLocaleString('ja-JP', {{timeZone:'Asia/Tokyo'}});
+  let t = `=== OFI全銘柄ブリーフィング ===\\n生成: ${{now}}\\n\\n`;
+  for (const s of allData) {{
+    t += `▶ ${{s.code}} ${{s.name}}\\n`;
+    for (const [label, ins] of [['1分足', s.ins_i], ['日足', s.ins_d]]) {{
+      t += `  【${{label}}】${{ins.dominant}} (${{ins.dominant_pct}}%) / OFI:${{ins.ofi_dir}}\\n`;
+      t += `  示唆: ${{ins.summary}}\\n`;
+      if (ins.alert_trig) t += `  ⚡ アラート発動中!\\n`;
+    }}
+    t += `\\n`;
+  }}
+  t += `---\\n全銘柄の中で今日最も注目すべき銘柄と判断根拠を教えて。`;
+  navigator.clipboard.writeText(t).then(() => {{
+    const btn = document.getElementById('copy-all-btn');
+    btn.textContent = '✅ コピー完了!';
+    btn.classList.add('copied');
+    setTimeout(() => {{ btn.textContent = '📋 全銘柄コピー'; btn.classList.remove('copied'); }}, 2500);
+  }}).catch(() => {{
+    const ta = document.createElement('textarea');
+    ta.value = t; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    alert('コピーしました！');
+  }});
+}}
+
+document.getElementById('updated-at').textContent =
+  new Date('{build_time}').toLocaleString('ja-JP', {{timeZone:'Asia/Tokyo'}});
+</script>
+</body>
+</html>"""
+
+
+# ── メイン ────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    OUT_DIR.mkdir(exist_ok=True)
+    build_time = datetime.now(timezone.utc).isoformat()
+
+    print("=" * 60)
+    print("  OFI ダッシュボード生成 (全銘柄)")
+    print("=" * 60)
+
+    all_results = []
+    for stock in STOCKS:
+        print(f"\n[{stock['code']}] {stock['name']} ({stock['ticker']})")
+        result = fetch_and_process(stock)
+        result["code"]   = stock["code"]
+        result["name"]   = stock["name"]
+        result["market"] = stock["market"]
+        all_results.append(result)
+
+        # 銘柄別ページを出力
+        html = make_stock_page(stock, result, build_time)
+        out_path = OUT_DIR / f"{stock['code'].lower()}.html"
+        out_path.write_text(html, encoding="utf-8")
+        print(f"    → {out_path}")
+
+    # 一覧ページを出力
+    print("\n[INDEX] 銘柄一覧ページ生成")
+    index_html = make_index_page(all_results, build_time)
+    (OUT_DIR / "index.html").write_text(index_html, encoding="utf-8")
+    print(f"    → {OUT_DIR}/index.html")
+
+    # アラート銘柄をハイライト
+    print("\n" + "=" * 60)
+    print("  アラート状況:")
+    for r in all_results:
+        i_alert = r["ins_i"].get("alert_trig", False)
+        d_alert = r["ins_d"].get("alert_trig", False)
+        mark = "⚡" if i_alert or d_alert else "  "
+        i_phase = r["ins_i"].get("dominant","−")
+        d_phase = r["ins_d"].get("dominant","−")
+        print(f"  {mark} {r['code']:5s} {r['name']:8s}  1分足:{i_phase[:8]}  日足:{d_phase[:8]}")
+    print("=" * 60)
+    print(f"\n  → {OUT_DIR}/index.html を開いてください")
