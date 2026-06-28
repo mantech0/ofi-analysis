@@ -43,18 +43,90 @@ STOCKS = [
 OUT_DIR = pathlib.Path("dist")
 
 # ── ポートフォリオ取得 ─────────────────────────────────────────────
+def _clean_num(s: str) -> str:
+    """¥ $ , を除去して数値文字列に変換"""
+    return s.replace("¥", "").replace("$", "").replace(",", "").strip()
+
+
 def fetch_portfolio() -> list:
-    """Google Sheets の公開CSVを取得して保有銘柄リストを返す"""
+    """
+    Google Sheets の公開CSVを取得して保有銘柄リストを返す。
+    - 1行目が空/パーセント行でも自動でヘッダー行を検出
+    - 売却日付が入っている行（売却済み）は除外
+    - 同一コードが複数行ある場合は加重平均で集計
+    """
     url = os.environ.get("PORTFOLIO_CSV_URL", "")
     if not url:
         return []
     try:
         with urllib.request.urlopen(url, timeout=10) as r:
             content = r.read().decode("utf-8")
-        reader = csv.DictReader(io.StringIO(content))
-        holdings = [row for row in reader if row.get("コード", "").strip()]
-        print(f"  ポートフォリオ: {len(holdings)} 銘柄取得")
-        return holdings
+
+        all_rows = list(csv.reader(io.StringIO(content)))
+
+        # "コード" または "銘柄" を含む行をヘッダーとして自動検出
+        header_idx = None
+        for i, row in enumerate(all_rows):
+            if any(c.strip() in ("コード", "銘柄", "code") for c in row):
+                header_idx = i
+                break
+
+        if header_idx is None:
+            print("  ポートフォリオ: ヘッダー行が見つかりません（列名を確認してください）")
+            return []
+
+        headers = [c.strip() for c in all_rows[header_idx]]
+        data_rows = all_rows[header_idx + 1:]
+
+        holdings = {}
+        for row in data_rows:
+            if len(row) == 0 or all(c.strip() == "" for c in row):
+                continue
+            # 長さが足りない行はゼロ埋め
+            r = dict(zip(headers, [c.strip() for c in row] + [""] * len(headers)))
+
+            code = (r.get("コード") or "").strip()
+            name = (r.get("銘柄") or r.get("銘柄名") or "").strip()
+            qty_str   = _clean_num(r.get("株個数") or r.get("株数") or "")
+            price_str = _clean_num(r.get("購入価格") or r.get("平均取得価格") or "")
+            sell_date = (r.get("売却日付") or "").strip()
+            account   = (r.get("口座区分") or "").strip()
+
+            if not code or not name:
+                continue
+            if sell_date:           # 売却済みはスキップ
+                continue
+
+            try:
+                qty   = float(qty_str)   if qty_str   else 0.0
+                price = float(price_str) if price_str else 0.0
+            except ValueError:
+                continue
+
+            if qty <= 0:
+                continue
+
+            # 通貨判定: 数字コード or 285A/2869 → JPY、それ以外 → USD
+            is_jp = code.isdigit() or code in ("285A", "2869") or code.endswith(".T")
+            currency = "JPY" if is_jp else "USD"
+
+            # 同一コードを加重平均で集計
+            if code in holdings:
+                ex = holdings[code]
+                total = ex["qty"] + qty
+                ex["price"] = (ex["price"] * ex["qty"] + price * qty) / total
+                ex["qty"]   = total
+            else:
+                holdings[code] = {
+                    "code": code, "name": name,
+                    "qty": qty, "price": price,
+                    "currency": currency, "account": account,
+                }
+
+        result = list(holdings.values())
+        print(f"  ポートフォリオ: {len(result)} 銘柄取得（売却済み除く）")
+        return result
+
     except Exception as e:
         print(f"  ポートフォリオ取得エラー（スキップ）: {e}")
         return []
@@ -64,18 +136,15 @@ def portfolio_to_text(holdings: list) -> str:
     """ブリーフィングに挿入するテキストを生成"""
     if not holdings:
         return ""
-    lines = ["=== 保有銘柄 ==="]
+    lines = ["=== 保有銘柄（個別株）==="]
     for h in holdings:
-        code  = h.get("コード", "").strip()
-        name  = h.get("銘柄名", "").strip()
-        qty   = h.get("株数", "").strip()
-        price = h.get("平均取得価格", "").strip()
-        cur   = h.get("通貨", "JPY").strip()
-        memo  = h.get("メモ", "").strip()
-        sym   = "$" if cur == "USD" else "¥"
-        line  = f"{code} {name}: {qty}株 @{sym}{price}"
-        if memo:
-            line += f"  ({memo})"
+        sym   = "$" if h["currency"] == "USD" else "¥"
+        qty   = int(h["qty"]) if h["qty"] == int(h["qty"]) else h["qty"]
+        price = h["price"]
+        price_str = f"{price:,.0f}" if h["currency"] == "JPY" else f"{price:,.2f}"
+        line  = f"{h['code']} {h['name']}: {qty}株 @{sym}{price_str}"
+        if h.get("account"):
+            line += f" [{h['account']}]"
         lines.append(line)
     return "\n".join(lines)
 
