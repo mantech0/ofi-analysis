@@ -51,16 +51,18 @@ def _clean_num(s: str) -> str:
 def fetch_portfolio() -> list:
     """
     Google Sheets の公開CSVを取得して保有銘柄リストを返す。
-    - 1行目が空/パーセント行でも自動でヘッダー行を検出
-    - 売却日付が入っている行（売却済み）は除外
+    - ヘッダー行を自動検出（1行目が空/パーセント行でも対応）
+    - 売却日付が入っている行は除外
     - 同一コードが複数行ある場合は加重平均で集計
+    - 「株個数」のような重複列名は最初の出現（購入側）を使用
     """
     url = os.environ.get("PORTFOLIO_CSV_URL", "")
     if not url:
         return []
     try:
+        # utf-8-sig で BOM を自動除去
         with urllib.request.urlopen(url, timeout=10) as r:
-            content = r.read().decode("utf-8")
+            content = r.read().decode("utf-8-sig")
 
         all_rows = list(csv.reader(io.StringIO(content)))
 
@@ -72,25 +74,46 @@ def fetch_portfolio() -> list:
                 break
 
         if header_idx is None:
-            print("  ポートフォリオ: ヘッダー行が見つかりません（列名を確認してください）")
+            print("  ポートフォリオ: ヘッダー行が見つかりません")
             return []
 
         headers = [c.strip() for c in all_rows[header_idx]]
-        data_rows = all_rows[header_idx + 1:]
+        print(f"  ヘッダー検出: 行{header_idx + 1} → {headers[:6]}...")
+
+        # 重複列名があっても「最初の出現」を使うため index() で列番号を取得
+        def first_col(*names) -> int:
+            for name in names:
+                try:
+                    return headers.index(name)
+                except ValueError:
+                    pass
+            return -1
+
+        ci_code  = first_col("コード", "code")
+        ci_name  = first_col("銘柄", "銘柄名")
+        ci_qty   = first_col("株個数", "株数")       # 購入側（最初の出現）
+        ci_price = first_col("購入価格", "平均取得価格")
+        ci_sell  = first_col("売却日付")
+        ci_acct  = first_col("口座区分")
+
+        if ci_code < 0 or ci_name < 0:
+            print(f"  コード/銘柄列が見つかりません。列一覧: {headers}")
+            return []
+
+        def get(row, idx):
+            return row[idx].strip() if 0 <= idx < len(row) else ""
 
         holdings = {}
-        for row in data_rows:
-            if len(row) == 0 or all(c.strip() == "" for c in row):
+        for row in all_rows[header_idx + 1:]:
+            if not row or all(c.strip() == "" for c in row):
                 continue
-            # 長さが足りない行はゼロ埋め
-            r = dict(zip(headers, [c.strip() for c in row] + [""] * len(headers)))
 
-            code = (r.get("コード") or "").strip()
-            name = (r.get("銘柄") or r.get("銘柄名") or "").strip()
-            qty_str   = _clean_num(r.get("株個数") or r.get("株数") or "")
-            price_str = _clean_num(r.get("購入価格") or r.get("平均取得価格") or "")
-            sell_date = (r.get("売却日付") or "").strip()
-            account   = (r.get("口座区分") or "").strip()
+            code      = get(row, ci_code)
+            name      = get(row, ci_name)
+            qty_str   = _clean_num(get(row, ci_qty))
+            price_str = _clean_num(get(row, ci_price))
+            sell_date = get(row, ci_sell)
+            account   = get(row, ci_acct)
 
             if not code or not name:
                 continue
@@ -106,11 +129,9 @@ def fetch_portfolio() -> list:
             if qty <= 0:
                 continue
 
-            # 通貨判定: 数字コード or 285A/2869 → JPY、それ以外 → USD
             is_jp = code.isdigit() or code in ("285A", "2869") or code.endswith(".T")
             currency = "JPY" if is_jp else "USD"
 
-            # 同一コードを加重平均で集計
             if code in holdings:
                 ex = holdings[code]
                 total = ex["qty"] + qty
