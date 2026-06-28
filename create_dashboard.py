@@ -12,8 +12,12 @@ create_dashboard.py
   8053.html         ← 住友商事
 """
 
+import csv
+import io
 import json
+import os
 import pathlib
+import urllib.request
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -37,6 +41,43 @@ STOCKS = [
 ]
 
 OUT_DIR = pathlib.Path("dist")
+
+# ── ポートフォリオ取得 ─────────────────────────────────────────────
+def fetch_portfolio() -> list:
+    """Google Sheets の公開CSVを取得して保有銘柄リストを返す"""
+    url = os.environ.get("PORTFOLIO_CSV_URL", "")
+    if not url:
+        return []
+    try:
+        with urllib.request.urlopen(url, timeout=10) as r:
+            content = r.read().decode("utf-8")
+        reader = csv.DictReader(io.StringIO(content))
+        holdings = [row for row in reader if row.get("コード", "").strip()]
+        print(f"  ポートフォリオ: {len(holdings)} 銘柄取得")
+        return holdings
+    except Exception as e:
+        print(f"  ポートフォリオ取得エラー（スキップ）: {e}")
+        return []
+
+
+def portfolio_to_text(holdings: list) -> str:
+    """ブリーフィングに挿入するテキストを生成"""
+    if not holdings:
+        return ""
+    lines = ["=== 保有銘柄 ==="]
+    for h in holdings:
+        code  = h.get("コード", "").strip()
+        name  = h.get("銘柄名", "").strip()
+        qty   = h.get("株数", "").strip()
+        price = h.get("平均取得価格", "").strip()
+        cur   = h.get("通貨", "JPY").strip()
+        memo  = h.get("メモ", "").strip()
+        sym   = "$" if cur == "USD" else "¥"
+        line  = f"{code} {name}: {qty}株 @{sym}{price}"
+        if memo:
+            line += f"  ({memo})"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 # ── データ取得 ─────────────────────────────────────────────────────
@@ -431,7 +472,8 @@ document.getElementById('updated-at').textContent =
 </html>"""
 
 
-def make_index_page(all_results: list, build_time: str) -> str:
+def make_index_page(all_results: list, build_time: str,
+                    portfolio_text: str = "") -> str:
     # 銘柄カード HTML
     cards_html = ""
     for r in all_results:
@@ -536,10 +578,13 @@ def make_index_page(all_results: list, build_time: str) -> str:
 {COMMON_JS}
 
 const allData = {all_ins_json};
+const portfolioText = `__PORTFOLIO_TEXT__`;
 
 function copyAll() {{
   const now = new Date().toLocaleString('ja-JP', {{timeZone:'Asia/Tokyo'}});
-  let t = `=== OFI全銘柄ブリーフィング ===\\n生成: ${{now}}\\n\\n`;
+  let t = `=== OFI全銘柄ブリーフィング ===\\n生成: ${{now}}\\n`;
+  if (portfolioText) t += `\\n${{portfolioText}}\\n`;
+  t += `\\n`;
   for (const s of allData) {{
     t += `▶ ${{s.code}} ${{s.name}}\\n`;
     for (const [label, ins] of [['1分足', s.ins_i], ['日足', s.ins_d]]) {{
@@ -549,7 +594,7 @@ function copyAll() {{
     }}
     t += `\\n`;
   }}
-  t += `---\\n全銘柄の中で今日最も注目すべき銘柄と判断根拠を教えて。`;
+  t += `---\\n保有銘柄の状況を踏まえて、今日最も注目すべき銘柄と判断根拠を教えて。`;
   navigator.clipboard.writeText(t).then(() => {{
     const btn = document.getElementById('copy-all-btn');
     btn.textContent = '✅ コピー完了!';
@@ -568,6 +613,9 @@ document.getElementById('updated-at').textContent =
 </script>
 </body>
 </html>"""
+    # portfolio_text はバックティックやブレースを含む可能性があるため replace で埋め込む
+    html = html.replace("__PORTFOLIO_TEXT__", portfolio_text.replace("`", "'").replace("\\", "\\\\"))
+    return html
 
 
 # ── メイン ────────────────────────────────────────────────────────
@@ -578,6 +626,15 @@ if __name__ == "__main__":
     print("=" * 60)
     print("  OFI ダッシュボード生成 (全銘柄)")
     print("=" * 60)
+
+    # ポートフォリオ取得
+    print("\n[PORTFOLIO] Google Sheets からポートフォリオ取得")
+    holdings = fetch_portfolio()
+    ptxt = portfolio_to_text(holdings)
+    if ptxt:
+        print(ptxt)
+    else:
+        print("  （PORTFOLIO_CSV_URL 未設定 or 取得エラー — スキップ）")
 
     all_results = []
     for stock in STOCKS:
@@ -596,7 +653,7 @@ if __name__ == "__main__":
 
     # 一覧ページを出力
     print("\n[INDEX] 銘柄一覧ページ生成")
-    index_html = make_index_page(all_results, build_time)
+    index_html = make_index_page(all_results, build_time, portfolio_text=ptxt)
     (OUT_DIR / "index.html").write_text(index_html, encoding="utf-8")
     print(f"    → {OUT_DIR}/index.html")
 

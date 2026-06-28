@@ -29,6 +29,8 @@ jobs:
 
       - name: ダッシュボードを生成
         run: python create_dashboard.py
+        env:
+          PORTFOLIO_CSV_URL: ${{ secrets.PORTFOLIO_CSV_URL }}
 
       - name: GitHub Pages にデプロイ
         uses: peaceiris/actions-gh-pages@v4
