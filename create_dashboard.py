@@ -607,7 +607,7 @@ def make_index_page(all_results: list, build_time: str,
         ensure_ascii=False
     )
 
-    return f"""<!DOCTYPE html>
+    html = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
