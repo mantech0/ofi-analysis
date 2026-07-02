@@ -676,8 +676,8 @@ const allData = {all_ins_json};
 const portfolioText = `__PORTFOLIO_TEXT__`;
 
 function copyAll() {{
-  const now = new Date().toLocaleString('ja-JP', {{timeZone:'Asia/Tokyo'}});
-  let t = `=== OFI全銘柄ブリーフィング ===\\n生成: ${{now}}\\n`;
+  const updated = new Date('{build_time}').toLocaleString('ja-JP', {{timeZone:'Asia/Tokyo'}});
+  let t = `=== OFI全銘柄ブリーフィング ===\\n更新完了: ${{updated}}\\n`;
   if (portfolioText) t += `\\n${{portfolioText}}\\n`;
   t += `\\n`;
   for (const s of allData) {{
