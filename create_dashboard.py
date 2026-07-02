@@ -612,6 +612,15 @@ def make_index_page(all_results: list, build_time: str,
         ensure_ascii=False
     )
 
+    # build_time を Python 側で JST 文字列に変換（JavaScript Date パース問題を回避）
+    from datetime import timedelta
+    _jst = timezone(timedelta(hours=9))
+    try:
+        _dt = datetime.fromisoformat(build_time).astimezone(_jst)
+        build_time_jst = _dt.strftime("%Y/%m/%d %H:%M")
+    except Exception:
+        build_time_jst = build_time
+
     html = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -676,8 +685,7 @@ const allData = {all_ins_json};
 const portfolioText = `__PORTFOLIO_TEXT__`;
 
 function copyAll() {{
-  const updated = new Date('{build_time}').toLocaleString('ja-JP', {{timeZone:'Asia/Tokyo'}});
-  let t = `=== OFI全銘柄ブリーフィング ===\\n更新完了: ${{updated}}\\n`;
+  let t = `=== OFI全銘柄ブリーフィング ===\\n更新完了: {build_time_jst}\\n`;
   if (portfolioText) t += `\\n${{portfolioText}}\\n`;
   t += `\\n`;
   for (const s of allData) {{
