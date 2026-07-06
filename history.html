@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OFI 履歴</title>
+<style>
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #E0E0E0; }
+a { text-decoration: none; color: inherit; }
+.header {
+  background: #1A1A2E; padding: 12px 16px;
+  border-bottom: 1px solid #2A3A5C;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header h1 { font-size: 16px; font-weight: 600; }
+.back-btn {
+  background: #1E2A3A; color: #90CAF9; border: 1px solid #2A3A5C;
+  padding: 6px 12px; border-radius: 6px; font-size: 13px;
+}
+.header-right { display: flex; gap: 8px; align-items: center; }
+.updated-at { font-size: 11px; color: #374151; }
+.copy-btn {
+  background: #1B4332; color: #95D5B2; border: 1px solid #52B788;
+  padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-weight: 500;
+}
+.copy-btn.copied { background: #1565C0; color: #fff; border-color: #42A5F5; }
+.help-btn {
+  background: #243454; color: #90CAF9; border: 1px solid #3A5A8C;
+  padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.tabs {
+  display: flex; gap: 4px; padding: 8px 12px;
+  background: #161B27; border-bottom: 1px solid #2A3A5C;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.tab {
+  padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 500; background: #1E2A3A; color: #90A4AE;
+  white-space: nowrap; flex-shrink: 0;
+}
+.tab.active { background: #1565C0; color: #fff; }
+.insight-box { background: #161B27; border-bottom: 1px solid #2A3A5C; padding: 10px 14px; display: none; }
+.insight-box.active { display: block; }
+.insight-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 8px; }
+@media (min-width: 640px) { .insight-grid { grid-template-columns: repeat(4,1fr); } }
+.ins-card { background: #1A1A2E; border-radius: 6px; padding: 8px 10px; border-left: 3px solid #2A3A5C; }
+.ins-label { font-size: 10px; color: #546E7A; text-transform: uppercase; margin-bottom: 3px; }
+.ins-val { font-size: 13px; font-weight: 500; line-height: 1.3; }
+.ins-sub { font-size: 11px; color: #78909C; margin-top: 2px; }
+.insight-row2 { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.alert-on {
+  background: linear-gradient(135deg,#1B4332,#2D6A4F); border: 1px solid #52B788;
+  border-radius: 6px; padding: 6px 12px; color: #95D5B2; font-weight: 600; font-size: 13px;
+}
+.alert-off { background: #161B27; border: 1px solid #2A3A5C; border-radius: 6px; padding: 6px 12px; color: #4A5568; font-size: 12px; }
+.n-reason { font-size: 10px; color: #546E7A; margin-top: 2px; }
+.insight-summary {
+  background: #1E2A3A; border-left: 3px solid #90CAF9;
+  border-radius: 0 6px 6px 0; padding: 7px 12px;
+  font-size: 13px; color: #B0BEC5; margin-top: 6px; line-height: 1.6;
+}
+.ofi-up { color: #4CAF50; } .ofi-down { color: #FF5722; }
+.chart-wrap { display: none; }
+.chart-wrap.active { display: block; }
+.status-bar { background: #161B27; padding: 4px 16px; color: #374151; font-size: 11px; border-top: 1px solid #1E2A3A; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: #1A1A2E; border: 1px solid #2A3A5C; border-radius: 10px; padding: 24px; max-width: 640px; width: 92%; max-height: 85vh; overflow-y: auto; position: relative; }
+.modal h2 { font-size: 15px; margin-bottom: 14px; color: #90CAF9; }
+.modal h3 { font-size: 12px; margin: 14px 0 6px; color: #78909C; text-transform: uppercase; }
+.modal-close { position: absolute; top: 12px; right: 14px; background: none; border: none; color: #546E7A; font-size: 20px; cursor: pointer; }
+.guide-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 14px; }
+.guide-table th,.guide-table td { padding: 7px 10px; text-align: left; border-bottom: 1px solid #2A3A5C; }
+.guide-table th { color: #546E7A; }
+.guide-table td { color: #B0BEC5; }
+.cluster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.cluster-card { background: #16213E; border-radius: 6px; padding: 9px 12px; }
+.cluster-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.cluster-desc { font-size: 12px; color: #78909C; }
+
+.history-list { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.snap-card { background: #1A1A2E; border: 1px solid #2A3A5C; border-radius: 10px; overflow: hidden; }
+.snap-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; }
+.snap-ts { font-size: 14px; font-weight: 600; color: #90CAF9; }
+.snap-alerts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.alert-chip { background: #1B4332; color: #95D5B2; border: 1px solid #52B788; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+.snap-chevron { margin-left: auto; color: #546E7A; font-size: 14px; transition: 0.15s; }
+.snap-body { display: none; border-top: 1px solid #2A3A5C; padding: 10px 14px; }
+.snap-body.open { display: block; }
+.mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+@media (min-width: 640px) { .mini-grid { grid-template-columns: repeat(3, 1fr); } }
+.mini-card { background: #16213E; border-radius: 6px; padding: 7px 9px; }
+.mini-code { font-size: 12px; font-weight: 700; }
+.mini-name { font-size: 11px; color: #78909C; }
+.mini-phase { font-size: 11px; margin-top: 3px; }
+.snap-copy-btn {
+  background: #1B4332; color: #95D5B2; border: 1px solid #52B788;
+  padding: 8px 0; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-weight: 500; width: 100%;
+}
+.snap-copy-btn.copied { background: #1565C0; color: #fff; border-color: #42A5F5; }
+.empty-msg { padding: 48px 24px; color: #546E7A; text-align: center; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="back-btn">← 一覧</a>
+    <h1>OFI 履歴</h1>
+  </div>
+  <div class="header-right">
+    <span class="updated-at" id="updated-at"></span>
+    <button class="help-btn" onclick="openHelp()">?</button>
+  </div>
+</div>
+
+<div class="history-list" id="history-list"></div>
+<div class="status-bar">タップで展開 | 📋 でAIチャットにコピー</div>
+
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeHelp()">✕</button>
+    <h2>OFI チャートの見方ガイド</h2>
+    <h3>クラスタ 4 種の意味</h3>
+    <div class="cluster-grid">
+      <div class="cluster-card"><div class="cluster-name" style="color:#FFD700">⚡ ステルス買い</div><div class="cluster-desc">価格↓ OFI↑ — 機関が静かに仕込み中。最良エントリー候補</div></div>
+      <div class="cluster-card"><div class="cluster-name" style="color:#4CAF50">▲ 確認上昇</div><div class="cluster-desc">価格↑ OFI↑ — 素直な上昇。乗れるが出遅れ気味</div></div>
+      <div class="cluster-card"><div class="cluster-name" style="color:#FF5722">▼ 分配売り</div><div class="cluster-desc">価格↑ OFI↓ — 機関が高値で売り逃げ中。買わない／利確</div></div>
+      <div class="cluster-card"><div class="cluster-name" style="color:#78909C">▼ 確認下落</div><div class="cluster-desc">価格↓ OFI↓ — 素直な下落。様子見</div></div>
+    </div>
+    <h3>日中の判断フロー</h3>
+    <table class="guide-table">
+      <thead><tr><th>状況</th><th>読み方</th><th>アクション</th></tr></thead>
+      <tbody>
+        <tr><td>価格↓ + OFI↑ + ⚡</td><td>機関が静かに拾っている</td><td style="color:#FFD700">エントリー検討</td></tr>
+        <tr><td>価格↑ + OFI↓</td><td>機関が売り逃げ中</td><td>乗らない / 利確</td></tr>
+        <tr><td>両方↑</td><td>素直な上昇</td><td>出遅れ気味</td></tr>
+        <tr><td>両方↓</td><td>素直な下落</td><td>様子見</td></tr>
+      </tbody>
+    </table>
+    <h3>示唆ボックスの読み方</h3>
+    <table class="guide-table">
+      <tbody>
+        <tr><td><b>現在フェーズ</b></td><td>直近60本(1分足)/20本(日足) の最頻クラスタ</td></tr>
+        <tr><td><b>累積OFI方向</b></td><td>直近30本のOFI変化方向。価格と逆なら注目</td></tr>
+        <tr><td><b>バックテスト</b></td><td>過去シグナル後30分後(1分足)/5日後(日足) の勝率・平均リターン</td></tr>
+        <tr><td><b>エントリー条件</b></td><td>シグナル時OFI変化中央値 / 価格変化25パーセンタイルから算出</td></tr>
+        <tr><td><b>アラート閾値 N</b></td><td>統計的に偽陽性が1日0.3回以内になる最小連続回数</td></tr>
+      </tbody>
+    </table>
+    <h3>注意事項</h3>
+    <table class="guide-table">
+      <tbody>
+        <tr><td>データ</td><td>OHLC近似版 (bid/ask 実板なし)</td></tr>
+        <tr><td>単体シグナル</td><td>OFI だけでは「いつ上がるか」は不明。他の根拠と組み合わせること</td></tr>
+        <tr><td>バックテスト</td><td>過去の集計であり将来を保証しない</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<script>
+
+const PHASE_COLOR = {
+  "ステルス買い (Stealth Buy) ⚡": "#FFD700",
+  "確認上昇 (Bullish)": "#4CAF50",
+  "分配売り (Distribution)": "#FF5722",
+  "確認下落 (Bearish)": "#78909C",
+};
+function renderInsight(id, ins) {
+  const el = document.getElementById('ins_' + id);
+  if (!el || !ins) return;
+  const pc = PHASE_COLOR[ins.dominant] || '#90A4AE';
+  const bt = ins.backtest || {};
+  const ec = ins.entry   || {};
+  const fwd = ins.forward_bars || 30;
+  const btText = bt.n > 0
+    ? `勝率 <b>${bt.win_rate}%</b> / 平均 <b style="color:${bt.avg_ret>=0?'#4CAF50':'#FF5722'}">${bt.avg_ret>=0?'+':''}${bt.avg_ret}%</b> <span style="color:#546E7A">(N=${bt.n})</span>`
+    : '<span style="color:#546E7A">データ不足</span>';
+  const ecText = ec.n > 0
+    ? `OFI変化 <b>+${Number(ec.ofi_x).toLocaleString()}</b>以上 かつ 価格 <b>-${ec.price_y}%</b>以内`
+    : '<span style="color:#546E7A">データ不足</span>';
+  const alertHTML = ins.alert_trig
+    ? `<div class="alert-on">⚡ アラート発動! 連続<b>${ins.consecutive}</b>回 (閾値${ins.alert_n}回)</div>`
+    : `<div class="alert-off">⊘ 未発動 — 連続${ins.consecutive}/${ins.alert_n}回<div class="n-reason">${ins.n_reason||''}</div></div>`;
+  el.innerHTML = `
+<div class="insight-grid">
+  <div class="ins-card" style="border-left-color:${pc}">
+    <div class="ins-label">現在フェーズ</div>
+    <div class="ins-val" style="color:${pc}">${ins.dominant}</div>
+    <div class="ins-sub">${ins.dominant_pct}% / ${ins.lookback||60}本</div>
+  </div>
+  <div class="ins-card">
+    <div class="ins-label">累積OFI方向</div>
+    <div class="ins-val ${ins.ofi_dir&&ins.ofi_dir.includes('↑')?'ofi-up':'ofi-down'}">${ins.ofi_dir||'−'}</div>
+    <div class="ins-sub">ステルス買い ${ins.stealth_count}回 (${ins.base_rate}%)</div>
+  </div>
+  <div class="ins-card">
+    <div class="ins-label">バックテスト(${fwd}本後)</div>
+    <div class="ins-val" style="font-size:12px">${btText}</div>
+    <div class="ins-sub">中央値: ${bt.n>0?(bt.med_ret>=0?'+':'')+bt.med_ret+'%':'−'}</div>
+  </div>
+  <div class="ins-card">
+    <div class="ins-label">エントリー条件</div>
+    <div class="ins-val" style="font-size:12px">${ecText}</div>
+    <div class="ins-sub">シグナル${ec.n||0}件から算出</div>
+  </div>
+</div>
+<div class="insight-row2">${alertHTML}</div>
+<div class="insight-summary">💡 ${ins.summary||'分析中...'}</div>`;
+}
+function openHelp()  { document.getElementById('modal').classList.add('open'); }
+function closeHelp() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeHelp(); });
+
+
+const HISTORY = [{"id": "20260707_0017", "timestamp": "2026-07-06T15:17:12.024167+00:00", "ts_display": "2026/07/07 00:17", "stocks": [{"code": "MU", "name": "マイクロン", "market": "US", "ins_i": {"symbol": "MU", "timeframe": "intraday", "dominant": "確認下落 (Bearish)", "dominant_pct": 57, "ofi_dir": "↓ 下落", "consecutive": 0, "alert_n": 3, "alert_trig": false, "stealth_count": 93, "base_rate": 5.6, "false_exp": 0.06, "n_reason": "発生率 5.6% → 連続3回の偽陽性期待値 0.06回/1日", "backtest": {"n": 91, "win_rate": 49.5, "avg_ret": -0.576, "med_ret": -0.034}, "forward_bars": 30, "entry": {"ofi_x": 138719.0, "price_y": 0.36, "n": 93}, "lookback": 60, "summary": "1分足が「確認下落 57%」= 売り圧力が続いている。様子見が無難"}, "ins_d": {"symbol": "MU", "timeframe": "daily", "dominant": "確認下落 (Bearish)", "dominant_pct": 45, "ofi_dir": "↓ 下落", "consecutive": 0, "alert_n": 3, "alert_trig": false, "stealth_count": 0, "base_rate": 0.0, "false_exp": 0.0, "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年", "backtest": {"n": 0}, "forward_bars": 5, "entry": {}, "lookback": 20, "summary": "日足で「確認下落 45%」= 弱め。まだ底打ちサインはない ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"}}, {"code": "285A", "name": "キオクシア", "market": "JP", "ins_i": {"symbol": "285A", "timeframe": "intraday", "dominant": "確認下落 (Bearish)", "dominant_pct": 100, "ofi_dir": "↑ 上昇", "consecutive": 0, "alert_n": 3, "alert_trig": false, "stealth_count": 108, "base_rate": 6.8, "false_exp": 0.11, "n_reason": "発生率 6.8% → 連続3回の偽陽性期待値 0.11回/1日", "backtest": {"n": 108, "win_rate": 42.6, "avg_ret": -0.216, "med_ret": -0.568}, "forward_bars": 30, "entry": {"ofi_x": 191712.0, "price_y": 1.42, "n": 108}, "lookback": 60, "summary": "1分足が「確認下落 100%」= 売り圧力が続いている。様子見が無難 ／ ただし累積OFIは上昇中 → 価格下落中に買いが蓄積されている可能性（ステルス買い予兆）"}, "ins_d": {"symbol": "285A", "timeframe": "daily", "dominant": "確認上昇 (Bullish)", "dominant_pct": 50, "ofi_dir": "↑ 上昇", "consecutive": 0, "alert_n": 3, "alert_trig": false, "stealth_count": 0, "base_rate": 0.0, "false_exp": 0.0, "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年", "backtest": {"n": 0}, "forward_bars": 5, "entry": {}, "lookback": 20, "summary": "日足が「確認上昇 50%」= 素直な上昇トレンド。乗れるが出遅れ気味になりやすい ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"}}, {"code": "1969", "name": "高砂熱化学", "market": "JP", "ins_i": {"symbol": "1969", "timeframe": "intraday", "dominant": "確認上昇 (Bullish)", "dominant_pct": 100, "ofi_dir": "↓ 下落", "consecutive": 9, "alert_n": 4, "alert_trig": true, "stealth_count": 158, "base_rate": 10.5, "false_exp": 0.04, "n_reason": "発生率 10.5% → 連続4回の偽陽性期待値 0.04回/1日", "backtest": {"n": 145, "win_rate": 63.4, "avg_ret": 0.101, "med_ret": 0.099}, "forward_bars": 30, "entry": {"ofi_x": 2640.0, "price_y": 0.33, "n": 158}, "lookback": 60, "summary": "1分足が「確認上昇 100%」= 素直な上昇トレンド。乗れるが出遅れ気味になりやすい ／ ただし累積OFIは下落中 → 価格上昇に売りが付いてきており、上昇の持続力に注意 ／ ⚡ 連続9回のステルス買いアラート発動中 → 今すぐエントリー条件を確認して ／ 過去データでは同シグナル後30分後の勝率が63.4% / 平均+0.10% → 精度は良好"}, "ins_d": {"symbol": "1969", "timeframe": "daily", "dominant": "確認下落 (Bearish)", "dominant_pct": 60, "ofi_dir": "↓ 下落", "consecutive": 0, "alert_n": 3, "alert_trig": false, "stealth_count": 0, "base_rate": 0.0, "false_exp": 0.0, "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年", "backtest": {"n": 0}, "forward_bars": 5, "entry": {}, "lookback": 20, "summary": "日足が「確認下落 60%」= 売り圧力が続いている。様子見が無難 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"}}, {"code": "6503", "name": "三菱電機", "market": "JP", "ins_i": {"symbol": "6503", "timeframe": "intraday", "dominant": "確認下落 (Bearish)", "dominant_pct": 87, "ofi_dir": "↑ 上昇", "consecutive": 0, "alert_n": 3, "alert_trig": false, "stealth_count": 112, "base_rate": 7.0, "false_exp": 0.12, "n_reason": "発生率 7.0% → 連続3回の偽陽性期待値 0.12回/1日", "backtest": {"n": 112, "win_rate": 69.6, "avg_ret": 0.158, "med_ret": 0.168}, "forward_bars": 30, "entry": {"ofi_x": 4126.0, "price_y": 0.45, "n": 112}, "lookback": 60, "summary": "1分足が「確認下落 87%」= 売り圧力が続いている。様子見が無難 ／ ただし累積OFIは上昇中 → 価格下落中に買いが蓄積されている可能性（ステルス買い予兆） ／ 過去データでは同シグナル後30分後の勝率が69.6% / 平均+0.16% → 精度は良好"}, "ins_d": {"symbol": "6503", "timeframe": "daily", "dominant": "分配売り (Distribution)", "dominant_pct": 45, "ofi_dir": "↓ 下落", "consecutive": 0, "alert_n": 3, "alert_trig": false, "stealth_count": 0, "base_rate": 0.0, "false_exp": 0.0, "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年", "backtest": {"n": 0}, "forward_bars": 5, "entry": {}, "lookback": 20, "summary": "日足で「分配売り 45%」= 売り圧力が散見される。慎重に ／ 累積OFIも下落しており売り圧力を確認 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"}}, {"code": "8002", "name": "丸紅", "market": "JP", "ins_i": {"symbol": "8002", "timeframe": "intraday", "dominant": "確認上昇 (Bullish)", "dominant_pct": 92, "ofi_dir": "↑ 上昇", "consecutive": 59, "alert_n": 4, "alert_trig": true, "stealth_count": 181, "base_rate": 11.3, "false_exp": 0.06, "n_reason": "発生率 11.3% → 連続4回の偽陽性期待値 0.06回/1日", "backtest": {"n": 151, "win_rate": 62.3, "avg_ret": 0.088, "med_ret": 0.043}, "forward_bars": 30, "entry": {"ofi_x": 26783.0, "price_y": 0.22, "n": 181}, "lookback": 60, "summary": "1分足が「確認上昇 92%」= 素直な上昇トレンド。乗れるが出遅れ気味になりやすい ／ ⚡ 連続59回のステルス買いアラート発動中 → 今すぐエントリー条件を確認して ／ 過去データでは同シグナル後30分後の勝率が62.3% / 平均+0.09% → 精度は良好"}, "ins_d": {"symbol": "8002", "timeframe": "daily", "dominant": "確認下落 (Bearish)", "dominant_pct": 55, "ofi_dir": "↑ 上昇", "consecutive": 0, "alert_n": 3, "alert_trig": false, "stealth_count": 0, "base_rate": 0.0, "false_exp": 0.0, "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年", "backtest": {"n": 0}, "forward_bars": 5, "entry": {}, "lookback": 20, "summary": "日足が「確認下落 55%」= 売り圧力が続いている。様子見が無難 ／ ただし累積OFIは上昇中 → 価格下落中に買いが蓄積されている可能性（ステルス買い予兆） ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"}}, {"code": "8053", "name": "住友商事", "market": "JP", "ins_i": {"symbol": "8053", "timeframe": "intraday", "dominant": "確認下落 (Bearish)", "dominant_pct": 100, "ofi_dir": "↓ 下落", "consecutive": 0, "alert_n": 3, "alert_trig": false, "stealth_count": 98, "base_rate": 6.1, "false_exp": 0.08, "n_reason": "発生率 6.1% → 連続3回の偽陽性期待値 0.08回/1日", "backtest": {"n": 98, "win_rate": 30.6, "avg_ret": -0.081, "med_ret": -0.064}, "forward_bars": 30, "entry": {"ofi_x": 18310.0, "price_y": 0.25, "n": 98}, "lookback": 60, "summary": "1分足が「確認下落 100%」= 売り圧力が続いている。様子見が無難 ／ ただし過去シグナル後30分後の勝率は30.6% と低め → 追加確認を推奨"}, "ins_d": {"symbol": "8053", "timeframe": "daily", "dominant": "確認下落 (Bearish)", "dominant_pct": 60, "ofi_dir": "↓ 下落", "consecutive": 0, "alert_n": 3, "alert_trig": false, "stealth_count": 0, "base_rate": 0.0, "false_exp": 0.0, "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年", "backtest": {"n": 0}, "forward_bars": 5, "entry": {}, "lookback": 20, "summary": "日足が「確認下落 60%」= 売り圧力が続いている。様子見が無難 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"}}]}];
+const PC = {
+  "ステルス買い (Stealth Buy) ⚡": "#FFD700",
+  "確認上昇 (Bullish)":           "#4CAF50",
+  "分配売り (Distribution)":       "#FF5722",
+  "確認下落 (Bearish)":            "#78909C",
+};
+
+function buildSnapText(snap) {
+  let t = `=== OFI全銘柄ブリーフィング ===\n更新完了: ${snap.ts_display}\n\n`;
+  for (const s of snap.stocks) {
+    t += `▶ ${s.code} ${s.name}\n`;
+    for (const [label, ins] of [['1分足', s.ins_i], ['日足', s.ins_d]]) {
+      t += `  【${label}】${ins.dominant} (${ins.dominant_pct}%) / OFI:${ins.ofi_dir}\n`;
+      t += `  示唆: ${ins.summary}\n`;
+      if (ins.alert_trig) t += `  ⚡ アラート発動中!\n`;
+    }
+    t += `\n`;
+  }
+  t += `---\nこの時点(${snap.ts_display})のOFI状況を踏まえて分析してほしい。`;
+  return t;
+}
+
+function copySnap(idx, btn) {
+  const text = buildSnapText(HISTORY[idx]);
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅ コピー完了!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 AIにコピー'; btn.classList.remove('copied'); }, 2500);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    alert('コピーしました！');
+  });
+}
+
+function toggleSnap(idx) {
+  const body = document.getElementById('sb' + idx);
+  const chev = document.getElementById('sc' + idx);
+  const open = body.classList.toggle('open');
+  chev.textContent = open ? '▲' : '▼';
+}
+
+function render() {
+  const container = document.getElementById('history-list');
+  if (!HISTORY.length) {
+    container.innerHTML = '<div class="empty-msg">履歴がありません。<br>ダッシュボードを更新すると自動で記録されます。</div>';
+    return;
+  }
+  HISTORY.forEach((snap, idx) => {
+    const alertStocks = snap.stocks.filter(s => s.ins_i.alert_trig || s.ins_d.alert_trig);
+    const chips = alertStocks.map(s => `<span class="alert-chip">⚡ ${s.code}</span>`).join('');
+    const cards = snap.stocks.map(s => {
+      const ci = PC[s.ins_i.dominant] || '#90A4AE';
+      const cd = PC[s.ins_d.dominant] || '#90A4AE';
+      const flag = s.market === 'US' ? '🇺🇸' : '🇯🇵';
+      const alert = (s.ins_i.alert_trig || s.ins_d.alert_trig) ? ' ⚡' : '';
+      return `<div class="mini-card">
+        <div class="mini-code">${flag} ${s.code}${alert}</div>
+        <div class="mini-name">${s.name}</div>
+        <div class="mini-phase" style="color:${ci}">${s.ins_i.dominant}</div>
+        <div class="mini-phase" style="color:${cd}">${s.ins_d.dominant}</div>
+      </div>`;
+    }).join('');
+
+    container.insertAdjacentHTML('beforeend', `
+<div class="snap-card">
+  <div class="snap-header" onclick="toggleSnap(${idx})">
+    <div>
+      <div class="snap-ts">${snap.ts_display}</div>
+      <div class="snap-alerts">${chips || '<span style="font-size:11px;color:#546E7A">アラートなし</span>'}</div>
+    </div>
+    <span class="snap-chevron" id="sc${idx}">▼</span>
+  </div>
+  <div class="snap-body" id="sb${idx}">
+    <div class="mini-grid">${cards}</div>
+    <button class="snap-copy-btn" onclick="copySnap(${idx}, this)">📋 AIにコピー</button>
+  </div>
+</div>`);
+  });
+}
+
+render();
+document.getElementById('updated-at').textContent =
+  new Date('2026-07-06T15:17:12.024167+00:00').toLocaleString('ja-JP', {timeZone:'Asia/Tokyo'});
+</script>
+</body>
+</html>
