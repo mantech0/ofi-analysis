@@ -5,11 +5,18 @@ OFI_dummy_gen.py
 右肩上がりに溜まっている状態（プロのステルス買いの罠）」を意図的に再現。
 """
 
+import json
+import os
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 
+from OFI_calculator import calculate_ofi
+
 np.random.seed(42)
+
+LOGS_DIR = os.path.join(os.path.dirname(__file__), "logs")
+LOG_INDEX_PATH = os.path.join(LOGS_DIR, "run_log.json")
 
 N = 390  # 9:30〜16:00 (1取引日 = 390分)
 start_time = datetime(2024, 1, 15, 9, 30, 0)
@@ -59,7 +66,42 @@ df = pd.DataFrame({
     "ask_volume": ask_volumes,
 })
 
-output_path = "ofi_dummy_data.csv"
+# OFI計算
+df = calculate_ofi(df)
+
+# 従来の出力（後方互換）
+output_path = os.path.join(os.path.dirname(__file__), "ofi_dummy_data.csv")
 df.to_csv(output_path, index=False)
+
+# ログ保存
+os.makedirs(LOGS_DIR, exist_ok=True)
+run_ts = datetime.now()
+run_id = run_ts.strftime("%Y%m%d_%H%M")
+log_csv_path = os.path.join(LOGS_DIR, f"ofi_{run_id}.csv")
+df.to_csv(log_csv_path, index=False)
+
+# run_log.json に追記
+entry = {
+    "id": run_id,
+    "timestamp": run_ts.isoformat(timespec="seconds"),
+    "filename": f"ofi_{run_id}.csv",
+    "rows": len(df),
+    "status": "success",
+    "price_start": float(df["price"].iloc[0]),
+    "price_end": float(df["price"].iloc[-1]),
+    "cumulative_ofi_final": float(df["cumulative_ofi"].iloc[-1]),
+    "ofi_mean": round(float(df["ofi"].mean()), 2),
+}
+if os.path.exists(LOG_INDEX_PATH):
+    with open(LOG_INDEX_PATH, "r", encoding="utf-8") as f:
+        log_data = json.load(f)
+else:
+    log_data = []
+log_data.append(entry)
+with open(LOG_INDEX_PATH, "w", encoding="utf-8") as f:
+    json.dump(log_data, f, ensure_ascii=False, indent=2)
+
 print(f"[OK] ダミーデータを生成しました: {output_path}  ({len(df)} 行)")
-print(df.head(5).to_string())
+print(f"[LOG] スナップショット保存: {log_csv_path}")
+print(f"[LOG] ログ更新: {LOG_INDEX_PATH}  (累計 {len(log_data)} 件)")
+print(df[["timestamp", "price", "ofi", "cumulative_ofi"]].head(5).to_string())
