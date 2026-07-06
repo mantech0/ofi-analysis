@@ -2,15 +2,24 @@ name: OFI ダッシュボード更新
 
 on:
   schedule:
-    # JST = UTC+9  /  平日(月-金) = UTC 1-5
-    - cron: '0 23 * * 1-5'   #  8:00 JST 火-土（米国市場確認、UTC月-金）
-    - cron: '15 0 * * 1-5'   #  9:15 JST
-    - cron: '30 0 * * 1-5'   #  9:30 JST
-    - cron: '30 1 * * 1-5'   # 10:30 JST
-    - cron: '35 2 * * 1-5'   # 11:35 JST
-    - cron: '30 4 * * 1-5'   # 13:30 JST
-    - cron: '30 5 * * 1-5'   # 14:30 JST
-    - cron: '45 6 * * 1-5'   # 15:45 JST
+    # 30分前倒し＋端数分でGitHub混雑を回避（実際の到達は目標時刻±15分程度）
+    # 8:00〜9:30はJST→UTC日付をまたぐため day=0-4（UTC日-木）
+    - cron: '28 22 * * 0-4'  # →  8:00 JST 月-金
+    - cron: '44 23 * * 0-4'  # →  9:15 JST 月-金
+    - cron: '59 23 * * 0-4'  # →  9:30 JST 月-金
+    # 10:30以降はJST＝UTC同日のため day=1-5（UTC月-金）
+    - cron: '3 1 * * 1-5'    # → 10:30 JST 月-金
+    - cron: '7 2 * * 1-5'    # → 11:35 JST 月-金
+    - cron: '3 4 * * 1-5'    # → 13:30 JST 月-金
+    - cron: '3 5 * * 1-5'    # → 14:30 JST 月-金
+    - cron: '17 6 * * 1-5'   # → 15:45 JST 月-金
+    # 米国市場時間帯（22:30〜26:00 JST = 13:30〜17:00 UTC 同日）
+    - cron: '58 12 * * 1-5'  # → 22:30 JST 月-金
+    - cron: '28 13 * * 1-5'  # → 23:00 JST 月-金
+    - cron: '58 13 * * 1-5'  # → 23:30 JST 月-金
+    - cron: '28 14 * * 1-5'  # → 24:00 JST 月-金
+    - cron: '28 15 * * 1-5'  # → 25:00 JST 月-金
+    - cron: '28 16 * * 1-5'  # → 26:00 JST 月-金
   workflow_dispatch:
     # スマホから手動でも実行できるようにする
 
@@ -38,6 +47,14 @@ jobs:
         run: python create_dashboard.py
         env:
           PORTFOLIO_CSV_URL: ${{ secrets.PORTFOLIO_CSV_URL }}
+
+      - name: 履歴ログをmainにコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add logs/
+          git diff --staged --quiet || git commit -m "📈 OFIスナップショット自動保存"
+          git push
 
       - name: GitHub Pages にデプロイ
         uses: peaceiris/actions-gh-pages@v4
