@@ -18,7 +18,7 @@ import json
 import os
 import pathlib
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
@@ -40,7 +40,47 @@ STOCKS = [
     {"code": "8053", "name": "住友商事",    "ticker": "8053.T", "market": "JP"},
 ]
 
-OUT_DIR = pathlib.Path("dist")
+OUT_DIR  = pathlib.Path("dist")
+LOGS_DIR = pathlib.Path(__file__).parent / "logs"
+HISTORY_PATH = LOGS_DIR / "history.json"
+
+# ── 履歴スナップショット ───────────────────────────────────────────
+def save_snapshot(all_results: list, build_time: str) -> list:
+    LOGS_DIR.mkdir(exist_ok=True)
+    _jst = timezone(timedelta(hours=9))
+    try:
+        _dt = datetime.fromisoformat(build_time).astimezone(_jst)
+        run_id     = _dt.strftime("%Y%m%d_%H%M")
+        ts_display = _dt.strftime("%Y/%m/%d %H:%M")
+    except Exception:
+        run_id     = datetime.now().strftime("%Y%m%d_%H%M")
+        ts_display = run_id
+
+    snapshot = {
+        "id": run_id,
+        "timestamp": build_time,
+        "ts_display": ts_display,
+        "stocks": [
+            {"code": r["code"], "name": r["name"], "market": r["market"],
+             "ins_i": r["ins_i"], "ins_d": r["ins_d"]}
+            for r in all_results
+        ],
+    }
+
+    history = []
+    if HISTORY_PATH.exists():
+        with open(HISTORY_PATH, "r", encoding="utf-8") as f:
+            history = json.load(f)
+    history = [h for h in history if h["id"] != run_id]  # 同IDは上書き
+    history.append(snapshot)
+    history = history[-100:]  # 最新100件のみ保持
+
+    with open(HISTORY_PATH, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
+    print(f"[HISTORY] スナップショット保存: {run_id} (累計 {len(history)} 件)")
+    return history
+
 
 # ── ポートフォリオ取得 ─────────────────────────────────────────────
 def _clean_num(s: str) -> str:
@@ -481,6 +521,151 @@ function copyBriefing() {{
 """
 
 
+def make_history_page(history: list, build_time: str) -> str:
+    history_json = json.dumps(list(reversed(history)), ensure_ascii=False)
+    return f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OFI 履歴</title>
+<style>
+{COMMON_CSS}
+.history-list {{ padding: 12px; display: flex; flex-direction: column; gap: 8px; }}
+.snap-card {{ background: #1A1A2E; border: 1px solid #2A3A5C; border-radius: 10px; overflow: hidden; }}
+.snap-header {{ display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; user-select: none; }}
+.snap-ts {{ font-size: 14px; font-weight: 600; color: #90CAF9; }}
+.snap-alerts {{ display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }}
+.alert-chip {{ background: #1B4332; color: #95D5B2; border: 1px solid #52B788; padding: 2px 8px; border-radius: 4px; font-size: 11px; }}
+.snap-chevron {{ margin-left: auto; color: #546E7A; font-size: 14px; transition: 0.15s; }}
+.snap-body {{ display: none; border-top: 1px solid #2A3A5C; padding: 10px 14px; }}
+.snap-body.open {{ display: block; }}
+.mini-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }}
+@media (min-width: 640px) {{ .mini-grid {{ grid-template-columns: repeat(3, 1fr); }} }}
+.mini-card {{ background: #16213E; border-radius: 6px; padding: 7px 9px; }}
+.mini-code {{ font-size: 12px; font-weight: 700; }}
+.mini-name {{ font-size: 11px; color: #78909C; }}
+.mini-phase {{ font-size: 11px; margin-top: 3px; }}
+.snap-copy-btn {{
+  background: #1B4332; color: #95D5B2; border: 1px solid #52B788;
+  padding: 8px 0; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-weight: 500; width: 100%;
+}}
+.snap-copy-btn.copied {{ background: #1565C0; color: #fff; border-color: #42A5F5; }}
+.empty-msg {{ padding: 48px 24px; color: #546E7A; text-align: center; font-size: 14px; }}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <a href="index.html" class="back-btn">← 一覧</a>
+    <h1>OFI 履歴</h1>
+  </div>
+  <div class="header-right">
+    <span class="updated-at" id="updated-at"></span>
+    <button class="help-btn" onclick="openHelp()">?</button>
+  </div>
+</div>
+
+<div class="history-list" id="history-list"></div>
+<div class="status-bar">タップで展開 | 📋 でAIチャットにコピー</div>
+
+{HELP_MODAL_HTML}
+
+<script>
+{COMMON_JS}
+
+const HISTORY = {history_json};
+const PC = {{
+  "ステルス買い (Stealth Buy) ⚡": "#FFD700",
+  "確認上昇 (Bullish)":           "#4CAF50",
+  "分配売り (Distribution)":       "#FF5722",
+  "確認下落 (Bearish)":            "#78909C",
+}};
+
+function buildSnapText(snap) {{
+  let t = `=== OFI全銘柄ブリーフィング ===\\n更新完了: ${{snap.ts_display}}\\n\\n`;
+  for (const s of snap.stocks) {{
+    t += `▶ ${{s.code}} ${{s.name}}\\n`;
+    for (const [label, ins] of [['1分足', s.ins_i], ['日足', s.ins_d]]) {{
+      t += `  【${{label}}】${{ins.dominant}} (${{ins.dominant_pct}}%) / OFI:${{ins.ofi_dir}}\\n`;
+      t += `  示唆: ${{ins.summary}}\\n`;
+      if (ins.alert_trig) t += `  ⚡ アラート発動中!\\n`;
+    }}
+    t += `\\n`;
+  }}
+  t += `---\\nこの時点(${{snap.ts_display}})のOFI状況を踏まえて分析してほしい。`;
+  return t;
+}}
+
+function copySnap(idx, btn) {{
+  const text = buildSnapText(HISTORY[idx]);
+  navigator.clipboard.writeText(text).then(() => {{
+    btn.textContent = '✅ コピー完了!';
+    btn.classList.add('copied');
+    setTimeout(() => {{ btn.textContent = '📋 AIにコピー'; btn.classList.remove('copied'); }}, 2500);
+  }}).catch(() => {{
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    alert('コピーしました！');
+  }});
+}}
+
+function toggleSnap(idx) {{
+  const body = document.getElementById('sb' + idx);
+  const chev = document.getElementById('sc' + idx);
+  const open = body.classList.toggle('open');
+  chev.textContent = open ? '▲' : '▼';
+}}
+
+function render() {{
+  const container = document.getElementById('history-list');
+  if (!HISTORY.length) {{
+    container.innerHTML = '<div class="empty-msg">履歴がありません。<br>ダッシュボードを更新すると自動で記録されます。</div>';
+    return;
+  }}
+  HISTORY.forEach((snap, idx) => {{
+    const alertStocks = snap.stocks.filter(s => s.ins_i.alert_trig || s.ins_d.alert_trig);
+    const chips = alertStocks.map(s => `<span class="alert-chip">⚡ ${{s.code}}</span>`).join('');
+    const cards = snap.stocks.map(s => {{
+      const ci = PC[s.ins_i.dominant] || '#90A4AE';
+      const cd = PC[s.ins_d.dominant] || '#90A4AE';
+      const flag = s.market === 'US' ? '🇺🇸' : '🇯🇵';
+      const alert = (s.ins_i.alert_trig || s.ins_d.alert_trig) ? ' ⚡' : '';
+      return `<div class="mini-card">
+        <div class="mini-code">${{flag}} ${{s.code}}${{alert}}</div>
+        <div class="mini-name">${{s.name}}</div>
+        <div class="mini-phase" style="color:${{ci}}">${{s.ins_i.dominant}}</div>
+        <div class="mini-phase" style="color:${{cd}}">${{s.ins_d.dominant}}</div>
+      </div>`;
+    }}).join('');
+
+    container.insertAdjacentHTML('beforeend', `
+<div class="snap-card">
+  <div class="snap-header" onclick="toggleSnap(${{idx}})">
+    <div>
+      <div class="snap-ts">${{snap.ts_display}}</div>
+      <div class="snap-alerts">${{chips || '<span style="font-size:11px;color:#546E7A">アラートなし</span>'}}</div>
+    </div>
+    <span class="snap-chevron" id="sc${{idx}}">▼</span>
+  </div>
+  <div class="snap-body" id="sb${{idx}}">
+    <div class="mini-grid">${{cards}}</div>
+    <button class="snap-copy-btn" onclick="copySnap(${{idx}}, this)">📋 AIにコピー</button>
+  </div>
+</div>`);
+  }});
+}}
+
+render();
+document.getElementById('updated-at').textContent =
+  new Date('{build_time}').toLocaleString('ja-JP', {{timeZone:'Asia/Tokyo'}});
+</script>
+</body>
+</html>"""
+
+
 def make_stock_page(stock: dict, result: dict, build_time: str) -> str:
     code   = stock["code"]
     name   = stock["name"]
@@ -613,7 +798,6 @@ def make_index_page(all_results: list, build_time: str,
     )
 
     # build_time を Python 側で JST 文字列に変換（JavaScript Date パース問題を回避）
-    from datetime import timedelta
     _jst = timezone(timedelta(hours=9))
     try:
         _dt = datetime.fromisoformat(build_time).astimezone(_jst)
@@ -666,6 +850,7 @@ def make_index_page(all_results: list, build_time: str,
   <div class="header-right">
     <span class="updated-at" id="updated-at"></span>
     <button class="copy-all-btn" id="copy-all-btn" onclick="copyAll()">📋 全銘柄コピー</button>
+    <a href="history.html" class="help-btn" style="text-decoration:none">🕐</a>
     <button class="help-btn" onclick="openHelp()">?</button>
   </div>
 </div>
@@ -759,6 +944,13 @@ if __name__ == "__main__":
     index_html = make_index_page(all_results, build_time, portfolio_text=ptxt)
     (OUT_DIR / "index.html").write_text(index_html, encoding="utf-8")
     print(f"    → {OUT_DIR}/index.html")
+
+    # 履歴スナップショットを保存して history.html を生成
+    print("\n[HISTORY] 履歴スナップショット保存 & history.html 生成")
+    history = save_snapshot(all_results, build_time)
+    history_html = make_history_page(history, build_time)
+    (OUT_DIR / "history.html").write_text(history_html, encoding="utf-8")
+    print(f"    → {OUT_DIR}/history.html")
 
     # アラート銘柄をハイライト
     print("\n" + "=" * 60)
