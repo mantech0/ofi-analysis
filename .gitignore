@@ -5,3 +5,4 @@ __pycache__/
 *.html
 .DS_Store
 alpaca_config.py
+polygon_config.py

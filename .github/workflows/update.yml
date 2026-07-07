@@ -48,6 +48,7 @@ jobs:
         run: python create_dashboard.py
         env:
           PORTFOLIO_CSV_URL: ${{ secrets.PORTFOLIO_CSV_URL }}
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
 
       - name: 履歴ログをmainにコミット
         run: |
