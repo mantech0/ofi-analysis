@@ -7942,5 +7942,268 @@
         }
       }
     ]
+  },
+  {
+    "id": "20260708_1535",
+    "timestamp": "2026-07-08T06:35:50.483787+00:00",
+    "ts_display": "2026/07/08 15:35",
+    "stocks": [
+      {
+        "code": "MU",
+        "name": "マイクロン",
+        "market": "US",
+        "ins_i": {
+          "symbol": "MU",
+          "timeframe": "intraday",
+          "dominant": "確認下落 (Bearish)",
+          "dominant_pct": 58,
+          "ofi_dir": "↑ 上昇",
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "stealth_count": 90,
+          "base_rate": 5.8,
+          "false_exp": 0.07,
+          "n_reason": "発生率 5.8% → 連続3回の偽陽性期待値 0.07回/1日",
+          "backtest": {
+            "n": 90,
+            "win_rate": 27.8,
+            "avg_ret": -1.692,
+            "med_ret": -0.62
+          },
+          "forward_bars": 30,
+          "entry": {
+            "ofi_x": 68571.0,
+            "price_y": 0.43,
+            "n": 90
+          },
+          "lookback": 60,
+          "summary": "1分足が「確認下落 58%」= 売り圧力が続いている。様子見が無難 ／ ただし累積OFIは上昇中 → 価格下落中に買いが蓄積されている可能性（ステルス買い予兆） ／ ただし過去シグナル後30分後の勝率は27.8% と低め → 追加確認を推奨"
+        },
+        "ins_d": {
+          "dominant": "取得エラー",
+          "summary": "Found array with 0 sample(s) (shape=(0, 2)) while a minimum of 1 is required by StandardScaler.",
+          "dominant_pct": 0,
+          "ofi_dir": "−",
+          "stealth_count": 0,
+          "base_rate": 0,
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "n_reason": "−",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20
+        }
+      },
+      {
+        "code": "285A",
+        "name": "キオクシア",
+        "market": "JP",
+        "ins_i": {
+          "dominant": "取得エラー",
+          "summary": "285A.T: 1分足データなし",
+          "dominant_pct": 0,
+          "ofi_dir": "−",
+          "stealth_count": 0,
+          "base_rate": 0,
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "n_reason": "−",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 30,
+          "entry": {},
+          "lookback": 60
+        },
+        "ins_d": {
+          "dominant": "取得エラー",
+          "summary": "285A.T: 日足データなし",
+          "dominant_pct": 0,
+          "ofi_dir": "−",
+          "stealth_count": 0,
+          "base_rate": 0,
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "n_reason": "−",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20
+        }
+      },
+      {
+        "code": "1969",
+        "name": "高砂熱化学",
+        "market": "JP",
+        "ins_i": {
+          "dominant": "取得エラー",
+          "summary": "1969.T: 1分足データなし",
+          "dominant_pct": 0,
+          "ofi_dir": "−",
+          "stealth_count": 0,
+          "base_rate": 0,
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "n_reason": "−",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 30,
+          "entry": {},
+          "lookback": 60
+        },
+        "ins_d": {
+          "dominant": "取得エラー",
+          "summary": "1969.T: 日足データなし",
+          "dominant_pct": 0,
+          "ofi_dir": "−",
+          "stealth_count": 0,
+          "base_rate": 0,
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "n_reason": "−",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20
+        }
+      },
+      {
+        "code": "6503",
+        "name": "三菱電機",
+        "market": "JP",
+        "ins_i": {
+          "dominant": "取得エラー",
+          "summary": "6503.T: 1分足データなし",
+          "dominant_pct": 0,
+          "ofi_dir": "−",
+          "stealth_count": 0,
+          "base_rate": 0,
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "n_reason": "−",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 30,
+          "entry": {},
+          "lookback": 60
+        },
+        "ins_d": {
+          "dominant": "取得エラー",
+          "summary": "6503.T: 日足データなし",
+          "dominant_pct": 0,
+          "ofi_dir": "−",
+          "stealth_count": 0,
+          "base_rate": 0,
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "n_reason": "−",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20
+        }
+      },
+      {
+        "code": "8002",
+        "name": "丸紅",
+        "market": "JP",
+        "ins_i": {
+          "dominant": "取得エラー",
+          "summary": "8002.T: 1分足データなし",
+          "dominant_pct": 0,
+          "ofi_dir": "−",
+          "stealth_count": 0,
+          "base_rate": 0,
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "n_reason": "−",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 30,
+          "entry": {},
+          "lookback": 60
+        },
+        "ins_d": {
+          "dominant": "取得エラー",
+          "summary": "8002.T: 日足データなし",
+          "dominant_pct": 0,
+          "ofi_dir": "−",
+          "stealth_count": 0,
+          "base_rate": 0,
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "n_reason": "−",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20
+        }
+      },
+      {
+        "code": "8053",
+        "name": "住友商事",
+        "market": "JP",
+        "ins_i": {
+          "dominant": "取得エラー",
+          "summary": "8053.T: 1分足データなし",
+          "dominant_pct": 0,
+          "ofi_dir": "−",
+          "stealth_count": 0,
+          "base_rate": 0,
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "n_reason": "−",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 30,
+          "entry": {},
+          "lookback": 60
+        },
+        "ins_d": {
+          "dominant": "取得エラー",
+          "summary": "8053.T: 日足データなし",
+          "dominant_pct": 0,
+          "ofi_dir": "−",
+          "stealth_count": 0,
+          "base_rate": 0,
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "n_reason": "−",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20
+        }
+      }
+    ]
   }
 ]
