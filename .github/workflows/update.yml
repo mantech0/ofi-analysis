@@ -49,6 +49,8 @@ jobs:
         env:
           PORTFOLIO_CSV_URL: ${{ secrets.PORTFOLIO_CSV_URL }}
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
 
       - name: 履歴ログをmainにコミット
         run: |

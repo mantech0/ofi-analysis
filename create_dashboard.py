@@ -240,8 +240,8 @@ def fetch_and_process(stock: dict) -> dict:
     # ── イントラデイ ──────────────────────────────────────────────
     try:
         if market == "US":
-            from fetch_polygon_mu import fetch_quotes_1min
-            raw_i = fetch_quotes_1min(days=5)
+            from fetch_alpaca_mu import fetch_nbbo_1min
+            raw_i = fetch_nbbo_1min(days=5)
         else:
             from fetch_jp_stocks import fetch_intraday
             raw_ohlcv = fetch_intraday(ticker, period="5d", interval="1m")
@@ -268,7 +268,7 @@ def fetch_and_process(stock: dict) -> dict:
     # ── 日足 ───────────────────────────────────────────────────────
     try:
         if market == "US":
-            from fetch_polygon_mu import fetch_mu_daily
+            from fetch_alpaca_mu import fetch_mu_daily
             raw_d = fetch_mu_daily()
         else:
             from fetch_jp_stocks import fetch_daily
