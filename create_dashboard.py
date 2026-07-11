@@ -24,6 +24,7 @@ import pandas as pd
 
 from OFI_calculator import calculate_ofi
 from OFI_daily_calculator import calculate_daily_ofi
+from ofi_daily_score import update_score, get_7day_summary, format_score
 from OFI_slope_analyzer import analyze as intra_analyze
 from OFI_daily_slope_analyzer import analyze as daily_analyze
 from OFI_visualizer import build_chart
@@ -275,6 +276,16 @@ def fetch_and_process(stock: dict) -> dict:
             raw_d = fetch_daily(ticker, period="1y")
 
         ofi_d = calculate_daily_ofi(raw_d)
+
+        # ── 7日間スコア永続化（数バイトのJSON書き込みのみ）────────────────
+        try:
+            latest = ofi_d.iloc[-1]
+            update_score(code, str(latest["date"]), int(latest["daily_ofi"]))
+            result["score_7d"], result["score_entries"] = get_7day_summary(code)
+        except Exception as _e:
+            result["score_7d"] = 0
+            result["score_entries"] = []
+
         slope_d, _ = daily_analyze(ofi_d)
         fig_d = build_daily_chart(slope_d)
         fig_d.update_layout(title_text=f"{code} {name} — 日足 OFI 分析（5日・20日ウィンドウ）")
@@ -292,6 +303,8 @@ def fetch_and_process(stock: dict) -> dict:
                             "consecutive": 0, "alert_n": 3, "alert_trig": False,
                             "n_reason": "−", "backtest": {"n": 0},
                             "forward_bars": 5, "entry": {}, "lookback": 20}
+        result.setdefault("score_7d", 0)
+        result.setdefault("score_entries", [])
 
     return result
 
@@ -367,6 +380,10 @@ a { text-decoration: none; color: inherit; }
 .chart-wrap { display: none; }
 .chart-wrap.active { display: block; }
 .status-bar { background: #161B27; padding: 4px 16px; color: #374151; font-size: 11px; border-top: 1px solid #1E2A3A; }
+.hist-box { background: #16213E; border-left: 3px solid #546E7A; margin: 6px 14px; padding: 8px 12px; border-radius: 0 6px 6px 0; }
+.hist-label { font-size: 10px; color: #546E7A; text-transform: uppercase; margin-bottom: 4px; }
+.hist-total { font-size: 14px; font-weight: 600; }
+.card-hist { font-size: 11px; margin-top: 4px; }
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 1000; align-items: center; justify-content: center; }
 .modal-overlay.open { display: flex; }
 .modal { background: #1A1A2E; border: 1px solid #2A3A5C; border-radius: 10px; padding: 24px; max-width: 640px; width: 92%; max-height: 85vh; overflow-y: auto; position: relative; }
@@ -482,7 +499,10 @@ document.getElementById('modal').addEventListener('click', e => { if(e.target===
 """
 
 
-def _make_copy_js(ins_i: dict, ins_d: dict, code: str, name: str) -> str:
+def _make_copy_js(ins_i: dict, ins_d: dict, code: str, name: str,
+                  score_7d: int = 0, score_entries: list = None) -> str:
+    _s, _label, _ = format_score(score_7d)
+    _days = len(score_entries) if score_entries else 0
     return f"""
 function buildBriefing() {{
   const now = new Date().toLocaleString('ja-JP', {{timeZone:'Asia/Tokyo'}});
@@ -501,6 +521,8 @@ function buildBriefing() {{
     if (ins.alert_trig) t += `⚡ アラート発動中!\\n`;
     t += `示唆: ${{ins.summary}}\\n\\n`;
   }}
+  t += `【ヒストリカル需給（直近{_days}日間）】\\n`;
+  t += `・7日間通算累積OFI: {_s} （{_label}）\\n\\n`;
   t += `---\\n以上を踏まえて今日の売買判断について壁打ちしたい。`;
   return t;
 }}
@@ -673,11 +695,19 @@ def make_stock_page(stock: dict, result: dict, build_time: str) -> str:
     ins_d  = result["ins_d"]
     fig_i  = result.get("fig_i")
     fig_d  = result.get("fig_d")
+    score_7d      = result.get("score_7d", 0)
+    score_entries = result.get("score_entries", [])
+    _s, _label, _color = format_score(score_7d)
+    _days = len(score_entries)
 
     fig_i_json = fig_i.to_json() if fig_i else "null"
     fig_d_json = fig_d.to_json() if fig_d else "null"
     ins_i_json = json.dumps(ins_i, ensure_ascii=False)
     ins_d_json = json.dumps(ins_d, ensure_ascii=False)
+    hist_html = f"""<div class="hist-box">
+  <div class="hist-label">ヒストリカル需給（直近{_days}日間）</div>
+  <div class="hist-total" style="color:{_color}">7日間通算累積OFI: {_s}　（{_label}）</div>
+</div>"""
 
     return f"""<!DOCTYPE html>
 <html lang="ja">
@@ -713,13 +743,15 @@ def make_stock_page(stock: dict, result: dict, build_time: str) -> str:
 <div id="chart_i" class="chart-wrap active"><div id="plt_i"></div></div>
 <div id="chart_d" class="chart-wrap"><div id="plt_d"></div></div>
 
+{hist_html}
+
 <div class="status-bar">※ OHLC近似版 | Alpaca API 取得後に実板データへ差し替え予定</div>
 
 {HELP_MODAL_HTML}
 
 <script>
 {COMMON_JS}
-{_make_copy_js(ins_i, ins_d, code, name)}
+{_make_copy_js(ins_i, ins_d, code, name, score_7d, score_entries)}
 
 const ins_i = {ins_i_json};
 const ins_d = {ins_d_json};
@@ -766,6 +798,8 @@ def make_index_page(all_results: list, build_time: str,
         flag   = "🇺🇸" if r["market"] == "US" else "🇯🇵"
         alert  = "⚡" if ins_i.get("alert_trig") or ins_d.get("alert_trig") else ""
         summary = ins_i.get("summary", "")[:60] + "…" if len(ins_i.get("summary","")) > 60 else ins_i.get("summary","")
+        s7d = r.get("score_7d", 0)
+        s7_str, s7_label, s7_color = format_score(s7d)
 
         cards_html += f"""
 <a href="{code.lower()}.html" class="stock-card">
@@ -788,6 +822,7 @@ def make_index_page(all_results: list, build_time: str,
     </div>
   </div>
   <div class="card-summary">{summary}</div>
+  <div class="card-hist" style="color:{s7_color}">7日累積OFI: {s7_str}　{s7_label}</div>
 </a>"""
 
     # 全銘柄ブリーフィング用JS
