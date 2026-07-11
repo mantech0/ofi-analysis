@@ -785,7 +785,7 @@ document.getElementById('updated-at').textContent =
 
 
 def make_index_page(all_results: list, build_time: str,
-                    portfolio_text: str = "") -> str:
+                    portfolio_text: str = "", trigger_token: str = "") -> str:
     # 銘柄カード HTML
     cards_html = ""
     for r in all_results:
@@ -840,6 +840,11 @@ def make_index_page(all_results: list, build_time: str,
     except Exception:
         build_time_jst = build_time
 
+    update_btn_html = (
+        '<button class="update-btn" id="update-btn" onclick="triggerUpdate()">🔄 今すぐ更新</button>'
+        if trigger_token else ''
+    )
+
     html = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -873,6 +878,14 @@ def make_index_page(all_results: list, build_time: str,
   font-size: 14px; font-weight: 600;
 }}
 .copy-all-btn.copied {{ background: #1565C0; color: #fff; border-color: #42A5F5; }}
+.update-btn {{
+  background: #1B3A5C; color: #64B5F6; border: 1px solid #2196F3;
+  padding: 8px 14px; border-radius: 8px; cursor: pointer;
+  font-size: 13px; font-weight: 600; transition: background 0.2s;
+}}
+.update-btn.running {{ background: #3E2723; color: #FF8A65; border-color: #FF5722; }}
+.update-btn.done    {{ background: #1B5E20; color: #A5D6A7; border-color: #4CAF50; }}
+.update-btn.error   {{ background: #4A1515; color: #EF9A9A; border-color: #E53935; }}
 </style>
 </head>
 <body>
@@ -884,6 +897,7 @@ def make_index_page(all_results: list, build_time: str,
   </div>
   <div class="header-right">
     <span class="updated-at" id="updated-at"></span>
+    {update_btn_html}
     <button class="copy-all-btn" id="copy-all-btn" onclick="copyAll()">📋 全銘柄コピー</button>
     <a href="history.html" class="help-btn" style="text-decoration:none">🕐</a>
     <button class="help-btn" onclick="openHelp()">?</button>
@@ -933,6 +947,41 @@ function copyAll() {{
 
 document.getElementById('updated-at').textContent =
   new Date('{build_time}').toLocaleString('ja-JP', {{timeZone:'Asia/Tokyo'}});
+
+async function triggerUpdate() {{
+  const btn = document.getElementById('update-btn');
+  const token = '{trigger_token}';
+  btn.textContent = '⏳ 更新中...';
+  btn.className = 'update-btn running';
+  btn.disabled = true;
+  try {{
+    const res = await fetch(
+      'https://api.github.com/repos/mantech0/ofi-analysis/actions/workflows/update.yml/dispatches',
+      {{
+        method: 'POST',
+        headers: {{
+          'Authorization': 'token ' + token,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        }},
+        body: JSON.stringify({{ref: 'main'}}),
+      }}
+    );
+    if (res.status === 204) {{
+      btn.textContent = '✅ 更新開始! (約1分)';
+      btn.className = 'update-btn done';
+      setTimeout(() => {{ btn.textContent = '🔄 今すぐ更新'; btn.className = 'update-btn'; btn.disabled = false; }}, 8000);
+    }} else {{
+      btn.textContent = '❌ エラー ' + res.status;
+      btn.className = 'update-btn error';
+      setTimeout(() => {{ btn.textContent = '🔄 今すぐ更新'; btn.className = 'update-btn'; btn.disabled = false; }}, 3000);
+    }}
+  }} catch(e) {{
+    btn.textContent = '❌ 通信エラー';
+    btn.className = 'update-btn error';
+    setTimeout(() => {{ btn.textContent = '🔄 今すぐ更新'; btn.className = 'update-btn'; btn.disabled = false; }}, 3000);
+  }}
+}}
 </script>
 </body>
 </html>"""
@@ -976,7 +1025,8 @@ if __name__ == "__main__":
 
     # 一覧ページを出力
     print("\n[INDEX] 銘柄一覧ページ生成")
-    index_html = make_index_page(all_results, build_time, portfolio_text=ptxt)
+    index_html = make_index_page(all_results, build_time, portfolio_text=ptxt,
+                                  trigger_token=os.environ.get('TRIGGER_TOKEN', ''))
     (OUT_DIR / "index.html").write_text(index_html, encoding="utf-8")
     print(f"    → {OUT_DIR}/index.html")
 
