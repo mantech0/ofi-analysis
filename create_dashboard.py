@@ -793,7 +793,7 @@ document.getElementById('updated-at').textContent =
 
 
 def make_index_page(all_results: list, build_time: str,
-                    portfolio_text: str = "", trigger_token: str = "") -> str:
+                    portfolio_text: str = "") -> str:
     # 銘柄カード HTML
     cards_html = ""
     for r in all_results:
@@ -850,11 +850,6 @@ def make_index_page(all_results: list, build_time: str,
     except Exception:
         build_time_jst = build_time
 
-    update_btn_html = (
-        '<button class="update-btn" id="update-btn" onclick="triggerUpdate()">🔄 今すぐ更新</button>'
-        if trigger_token else ''
-    )
-
     html = f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -907,7 +902,7 @@ def make_index_page(all_results: list, build_time: str,
   </div>
   <div class="header-right">
     <span class="updated-at" id="updated-at"></span>
-    {update_btn_html}
+    <button class="update-btn" id="update-btn" onclick="triggerUpdate()">🔄 今すぐ更新</button>
     <button class="copy-all-btn" id="copy-all-btn" onclick="copyAll()">📋 全銘柄コピー</button>
     <a href="history.html" class="help-btn" style="text-decoration:none">🕐</a>
     <button class="help-btn" onclick="openHelp()">?</button>
@@ -965,7 +960,12 @@ document.getElementById('updated-at').textContent =
 
 async function triggerUpdate() {{
   const btn = document.getElementById('update-btn');
-  const token = '{trigger_token}';
+  let token = localStorage.getItem('gh_trigger_token') || '';
+  if (!token) {{
+    token = prompt('GitHub PAT (Actions権限) を入力してください。\\n一度入力するとこのデバイスに保存されます。');
+    if (!token) return;
+    localStorage.setItem('gh_trigger_token', token.trim());
+  }}
   btn.textContent = '⏳ 更新中...';
   btn.className = 'update-btn running';
   btn.disabled = true;
@@ -986,6 +986,11 @@ async function triggerUpdate() {{
       btn.textContent = '✅ 更新開始! (約1分)';
       btn.className = 'update-btn done';
       setTimeout(() => {{ btn.textContent = '🔄 今すぐ更新'; btn.className = 'update-btn'; btn.disabled = false; }}, 8000);
+    }} else if (res.status === 401) {{
+      localStorage.removeItem('gh_trigger_token');
+      btn.textContent = '❌ 認証エラー(再入力)';
+      btn.className = 'update-btn error';
+      setTimeout(() => {{ btn.textContent = '🔄 今すぐ更新'; btn.className = 'update-btn'; btn.disabled = false; }}, 3000);
     }} else {{
       btn.textContent = '❌ エラー ' + res.status;
       btn.className = 'update-btn error';
@@ -1040,8 +1045,7 @@ if __name__ == "__main__":
 
     # 一覧ページを出力
     print("\n[INDEX] 銘柄一覧ページ生成")
-    index_html = make_index_page(all_results, build_time, portfolio_text=ptxt,
-                                  trigger_token=os.environ.get('TRIGGER_TOKEN', ''))
+    index_html = make_index_page(all_results, build_time, portfolio_text=ptxt)
     (OUT_DIR / "index.html").write_text(index_html, encoding="utf-8")
     print(f"    → {OUT_DIR}/index.html")
 
