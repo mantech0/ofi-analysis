@@ -883,6 +883,10 @@ def make_index_page(all_results: list, build_time: str,
   font-size: 14px; font-weight: 600;
 }}
 .copy-all-btn.copied {{ background: #1565C0; color: #fff; border-color: #42A5F5; }}
+@media (max-width: 600px) {{
+  .btn-label {{ display: none; }}
+  .update-btn, .copy-all-btn {{ padding: 8px 10px; font-size: 18px; min-width: 42px; }}
+}}
 .update-btn {{
   background: #1B3A5C; color: #64B5F6; border: 1px solid #2196F3;
   padding: 8px 14px; border-radius: 8px; cursor: pointer;
@@ -902,8 +906,8 @@ def make_index_page(all_results: list, build_time: str,
   </div>
   <div class="header-right">
     <span class="updated-at" id="updated-at"></span>
-    <button class="update-btn" id="update-btn" onclick="triggerUpdate()">🔄 今すぐ更新</button>
-    <button class="copy-all-btn" id="copy-all-btn" onclick="copyAll()">📋 全銘柄コピー</button>
+    <button class="update-btn" id="update-btn" onclick="triggerUpdate()">🔄 <span class="btn-label">今すぐ更新</span></button>
+    <button class="copy-all-btn" id="copy-all-btn" onclick="copyAll()">📋 <span class="btn-label">全銘柄コピー</span></button>
     <a href="history.html" class="help-btn" style="text-decoration:none">🕐</a>
     <button class="help-btn" onclick="openHelp()">?</button>
   </div>
@@ -944,9 +948,9 @@ function copyAll() {{
   t += `---\\n保有銘柄の状況を踏まえて、今日最も注目すべき銘柄と判断根拠を教えて。`;
   navigator.clipboard.writeText(t).then(() => {{
     const btn = document.getElementById('copy-all-btn');
-    btn.textContent = '✅ コピー完了!';
+    btn.innerHTML = '✅ <span class="btn-label">コピー完了!</span>';
     btn.classList.add('copied');
-    setTimeout(() => {{ btn.textContent = '📋 全銘柄コピー'; btn.classList.remove('copied'); }}, 2500);
+    setTimeout(() => {{ btn.innerHTML = '📋 <span class="btn-label">全銘柄コピー</span>'; btn.classList.remove('copied'); }}, 2500);
   }}).catch(() => {{
     const ta = document.createElement('textarea');
     ta.value = t; document.body.appendChild(ta); ta.select();
@@ -966,9 +970,10 @@ async function triggerUpdate() {{
     if (!token) return;
     localStorage.setItem('gh_trigger_token', token.trim());
   }}
-  btn.textContent = '⏳ 更新中...';
+  btn.innerHTML = '⏳ <span class="btn-label">更新中...</span>';
   btn.className = 'update-btn running';
   btn.disabled = true;
+  const _rst = () => {{ btn.innerHTML = '🔄 <span class="btn-label">今すぐ更新</span>'; btn.className = 'update-btn'; btn.disabled = false; }};
   try {{
     const res = await fetch(
       'https://api.github.com/repos/mantech0/ofi-analysis/actions/workflows/update.yml/dispatches',
@@ -983,23 +988,23 @@ async function triggerUpdate() {{
       }}
     );
     if (res.status === 204) {{
-      btn.textContent = '✅ 更新開始! (約1分)';
+      btn.innerHTML = '✅ <span class="btn-label">更新開始!(約1分)</span>';
       btn.className = 'update-btn done';
-      setTimeout(() => {{ btn.textContent = '🔄 今すぐ更新'; btn.className = 'update-btn'; btn.disabled = false; }}, 8000);
+      setTimeout(_rst, 8000);
     }} else if (res.status === 401) {{
       localStorage.removeItem('gh_trigger_token');
-      btn.textContent = '❌ 認証エラー(再入力)';
+      btn.innerHTML = '❌ <span class="btn-label">認証エラー</span>';
       btn.className = 'update-btn error';
-      setTimeout(() => {{ btn.textContent = '🔄 今すぐ更新'; btn.className = 'update-btn'; btn.disabled = false; }}, 3000);
+      setTimeout(_rst, 3000);
     }} else {{
-      btn.textContent = '❌ エラー ' + res.status;
+      btn.innerHTML = '❌ <span class="btn-label">エラー ' + res.status + '</span>';
       btn.className = 'update-btn error';
-      setTimeout(() => {{ btn.textContent = '🔄 今すぐ更新'; btn.className = 'update-btn'; btn.disabled = false; }}, 3000);
+      setTimeout(_rst, 3000);
     }}
   }} catch(e) {{
-    btn.textContent = '❌ 通信エラー';
+    btn.innerHTML = '❌ <span class="btn-label">通信エラー</span>';
     btn.className = 'update-btn error';
-    setTimeout(() => {{ btn.textContent = '🔄 今すぐ更新'; btn.className = 'update-btn'; btn.disabled = false; }}, 3000);
+    setTimeout(_rst, 3000);
   }}
 }}
 </script>
