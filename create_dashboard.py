@@ -828,7 +828,9 @@ def make_index_page(all_results: list, build_time: str,
     # 全銘柄ブリーフィング用JS
     all_ins_json = json.dumps(
         [{"code": r["code"], "name": r["name"],
-          "ins_i": r["ins_i"], "ins_d": r["ins_d"]} for r in all_results],
+          "ins_i": r["ins_i"], "ins_d": r["ins_d"],
+          "score_7d": r.get("score_7d", 0),
+          "score_entries": r.get("score_entries", [])} for r in all_results],
         ensure_ascii=False
     )
 
@@ -929,6 +931,11 @@ function copyAll() {{
       t += `  示唆: ${{ins.summary}}\\n`;
       if (ins.alert_trig) t += `  ⚡ アラート発動中!\\n`;
     }}
+    const sc = s.score_7d || 0;
+    const scStr = sc > 0 ? `+${{sc.toLocaleString()}}` : sc.toLocaleString();
+    const scLabel = sc > 0 ? '買い超過' : sc < 0 ? '売り超過' : '中立';
+    const scDays = (s.score_entries || []).length;
+    t += `  【ヒストリカル需給（直近${{scDays}}日間）】7日間通算累積OFI: ${{scStr}} (${{scLabel}})\\n`;
     t += `\\n`;
   }}
   t += `---\\n保有銘柄の状況を踏まえて、今日最も注目すべき銘柄と判断根拠を教えて。`;
