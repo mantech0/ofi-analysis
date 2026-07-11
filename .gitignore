@@ -7,3 +7,4 @@ __pycache__/
 alpaca_config.py
 polygon_config.py
 .env
+venv/
