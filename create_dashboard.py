@@ -22,6 +22,14 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
+# .env をPythonで直接読み込む（bash source では & が誤解釈されるため）
+_env_path = pathlib.Path(__file__).parent / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text().splitlines():
+        if "=" in _line and not _line.startswith("#"):
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
+
 from OFI_calculator import calculate_ofi
 from OFI_daily_calculator import calculate_daily_ofi
 from ofi_daily_score import update_score, get_7day_summary, format_score
