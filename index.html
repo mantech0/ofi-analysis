@@ -387,7 +387,7 @@ const portfolioText = `=== 保有銘柄（個別株）===
 6503 三菱電機: 100株 @¥5,900 [NISA]`;
 
 function copyAll() {
-  let t = `=== OFI全銘柄ブリーフィング ===\n更新完了: 2026/07/19 09:15\n`;
+  let t = `=== OFI全銘柄ブリーフィング ===\n更新完了: 2026/07/19 09:30\n`;
   if (portfolioText) t += `\n${portfolioText}\n`;
   t += `\n`;
   for (const s of allData) {
@@ -419,7 +419,7 @@ function copyAll() {
 }
 
 document.getElementById('updated-at').textContent =
-  new Date('2026-07-19T00:15:06.226710+00:00').toLocaleString('ja-JP', {timeZone:'Asia/Tokyo'});
+  new Date('2026-07-19T00:30:05.445828+00:00').toLocaleString('ja-JP', {timeZone:'Asia/Tokyo'});
 
 async function triggerUpdate() {
   const btn = document.getElementById('update-btn');
