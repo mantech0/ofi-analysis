@@ -1,336 +1,5 @@
 [
   {
-    "id": "20260716_0100",
-    "timestamp": "2026-07-15T16:00:07.068442+00:00",
-    "ts_display": "2026/07/16 01:00",
-    "stocks": [
-      {
-        "code": "MU",
-        "name": "マイクロン",
-        "market": "US",
-        "ins_i": {
-          "symbol": "MU",
-          "timeframe": "intraday",
-          "dominant": "確認下落 (Bearish)",
-          "dominant_pct": 100,
-          "ofi_dir": "↓ 下落",
-          "consecutive": 12,
-          "alert_n": 4,
-          "alert_trig": true,
-          "stealth_count": 211,
-          "base_rate": 10.0,
-          "false_exp": 0.04,
-          "n_reason": "発生率 10.0% → 連続4回の偽陽性期待値 0.04回/1日",
-          "backtest": {
-            "n": 199,
-            "win_rate": 49.7,
-            "avg_ret": 0.196,
-            "med_ret": 0.0
-          },
-          "forward_bars": 30,
-          "entry": {
-            "ofi_x": 1958.0,
-            "price_y": 0.44,
-            "n": 211
-          },
-          "lookback": 60,
-          "summary": "1分足が「確認下落 100%」= 売り圧力が続いている。様子見が無難 ／ ⚡ 連続12回のステルス買いアラート発動中 → 今すぐエントリー条件を確認して"
-        },
-        "ins_d": {
-          "symbol": "MU",
-          "timeframe": "daily",
-          "dominant": "確認上昇 (Bullish)",
-          "dominant_pct": 35,
-          "ofi_dir": "↓ 下落",
-          "consecutive": 0,
-          "alert_n": 3,
-          "alert_trig": false,
-          "stealth_count": 0,
-          "base_rate": 0.0,
-          "false_exp": 0.0,
-          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
-          "backtest": {
-            "n": 0
-          },
-          "forward_bars": 5,
-          "entry": {},
-          "lookback": 20,
-          "summary": "日足で「確認上昇 35%」= 上昇傾向だがまだ方向感が弱い ／ ただし累積OFIは下落中 → 価格上昇に売りが付いてきており、上昇の持続力に注意 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
-        }
-      },
-      {
-        "code": "285A",
-        "name": "キオクシア",
-        "market": "JP",
-        "ins_i": {
-          "symbol": "285A",
-          "timeframe": "intraday",
-          "dominant": "確認上昇 (Bullish)",
-          "dominant_pct": 60,
-          "ofi_dir": "↑ 上昇",
-          "consecutive": 0,
-          "alert_n": 4,
-          "alert_trig": false,
-          "stealth_count": 216,
-          "base_rate": 13.5,
-          "false_exp": 0.11,
-          "n_reason": "発生率 13.5% → 連続4回の偽陽性期待値 0.11回/1日",
-          "backtest": {
-            "n": 216,
-            "win_rate": 40.3,
-            "avg_ret": -0.033,
-            "med_ret": -0.2
-          },
-          "forward_bars": 30,
-          "entry": {
-            "ofi_x": 137182.0,
-            "price_y": 0.67,
-            "n": 216
-          },
-          "lookback": 60,
-          "summary": "1分足が「確認上昇 60%」= 素直な上昇トレンド。乗れるが出遅れ気味になりやすい"
-        },
-        "ins_d": {
-          "symbol": "285A",
-          "timeframe": "daily",
-          "dominant": "確認下落 (Bearish)",
-          "dominant_pct": 65,
-          "ofi_dir": "↑ 上昇",
-          "consecutive": 0,
-          "alert_n": 3,
-          "alert_trig": false,
-          "stealth_count": 0,
-          "base_rate": 0.0,
-          "false_exp": 0.0,
-          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
-          "backtest": {
-            "n": 0
-          },
-          "forward_bars": 5,
-          "entry": {},
-          "lookback": 20,
-          "summary": "日足が「確認下落 65%」= 売り圧力が続いている。様子見が無難 ／ ただし累積OFIは上昇中 → 価格下落中に買いが蓄積されている可能性（ステルス買い予兆） ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
-        }
-      },
-      {
-        "code": "1969",
-        "name": "高砂熱化学",
-        "market": "JP",
-        "ins_i": {
-          "symbol": "1969",
-          "timeframe": "intraday",
-          "dominant": "確認下落 (Bearish)",
-          "dominant_pct": 72,
-          "ofi_dir": "↓ 下落",
-          "consecutive": 0,
-          "alert_n": 4,
-          "alert_trig": false,
-          "stealth_count": 207,
-          "base_rate": 14.0,
-          "false_exp": 0.13,
-          "n_reason": "発生率 14.0% → 連続4回の偽陽性期待値 0.13回/1日",
-          "backtest": {
-            "n": 200,
-            "win_rate": 44.0,
-            "avg_ret": 0.021,
-            "med_ret": -0.044
-          },
-          "forward_bars": 30,
-          "entry": {
-            "ofi_x": 2363.0,
-            "price_y": 0.59,
-            "n": 207
-          },
-          "lookback": 60,
-          "summary": "1分足が「確認下落 72%」= 売り圧力が続いている。様子見が無難"
-        },
-        "ins_d": {
-          "symbol": "1969",
-          "timeframe": "daily",
-          "dominant": "確認下落 (Bearish)",
-          "dominant_pct": 80,
-          "ofi_dir": "↓ 下落",
-          "consecutive": 0,
-          "alert_n": 3,
-          "alert_trig": false,
-          "stealth_count": 0,
-          "base_rate": 0.0,
-          "false_exp": 0.0,
-          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
-          "backtest": {
-            "n": 0
-          },
-          "forward_bars": 5,
-          "entry": {},
-          "lookback": 20,
-          "summary": "日足が「確認下落 80%」= 売り圧力が続いている。様子見が無難 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
-        }
-      },
-      {
-        "code": "6503",
-        "name": "三菱電機",
-        "market": "JP",
-        "ins_i": {
-          "symbol": "6503",
-          "timeframe": "intraday",
-          "dominant": "確認上昇 (Bullish)",
-          "dominant_pct": 88,
-          "ofi_dir": "↑ 上昇",
-          "consecutive": 3,
-          "alert_n": 4,
-          "alert_trig": false,
-          "stealth_count": 155,
-          "base_rate": 9.7,
-          "false_exp": 0.03,
-          "n_reason": "発生率 9.7% → 連続4回の偽陽性期待値 0.03回/1日",
-          "backtest": {
-            "n": 152,
-            "win_rate": 46.7,
-            "avg_ret": 0.018,
-            "med_ret": -0.035
-          },
-          "forward_bars": 30,
-          "entry": {
-            "ofi_x": 12831.0,
-            "price_y": 0.34,
-            "n": 155
-          },
-          "lookback": 60,
-          "summary": "1分足が「確認上昇 88%」= 素直な上昇トレンド。乗れるが出遅れ気味になりやすい"
-        },
-        "ins_d": {
-          "symbol": "6503",
-          "timeframe": "daily",
-          "dominant": "分配売り (Distribution)",
-          "dominant_pct": 50,
-          "ofi_dir": "↓ 下落",
-          "consecutive": 0,
-          "alert_n": 3,
-          "alert_trig": false,
-          "stealth_count": 0,
-          "base_rate": 0.0,
-          "false_exp": 0.0,
-          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
-          "backtest": {
-            "n": 0
-          },
-          "forward_bars": 5,
-          "entry": {},
-          "lookback": 20,
-          "summary": "日足が「分配売り 50%」= 機関の売り逃げフェーズ。今は仕込みの時期ではない ／ 累積OFIも下落しており売り圧力を確認 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
-        }
-      },
-      {
-        "code": "8002",
-        "name": "丸紅",
-        "market": "JP",
-        "ins_i": {
-          "symbol": "8002",
-          "timeframe": "intraday",
-          "dominant": "確認上昇 (Bullish)",
-          "dominant_pct": 80,
-          "ofi_dir": "↑ 上昇",
-          "consecutive": 7,
-          "alert_n": 4,
-          "alert_trig": true,
-          "stealth_count": 206,
-          "base_rate": 12.8,
-          "false_exp": 0.09,
-          "n_reason": "発生率 12.8% → 連続4回の偽陽性期待値 0.09回/1日",
-          "backtest": {
-            "n": 199,
-            "win_rate": 86.4,
-            "avg_ret": 0.214,
-            "med_ret": 0.224
-          },
-          "forward_bars": 30,
-          "entry": {
-            "ofi_x": 15202.0,
-            "price_y": 0.18,
-            "n": 206
-          },
-          "lookback": 60,
-          "summary": "1分足が「確認上昇 80%」= 素直な上昇トレンド。乗れるが出遅れ気味になりやすい ／ ⚡ 連続7回のステルス買いアラート発動中 → 今すぐエントリー条件を確認して ／ 過去データでは同シグナル後30分後の勝率が86.4% / 平均+0.21% → 精度は良好"
-        },
-        "ins_d": {
-          "symbol": "8002",
-          "timeframe": "daily",
-          "dominant": "確認下落 (Bearish)",
-          "dominant_pct": 60,
-          "ofi_dir": "↓ 下落",
-          "consecutive": 0,
-          "alert_n": 3,
-          "alert_trig": false,
-          "stealth_count": 0,
-          "base_rate": 0.0,
-          "false_exp": 0.0,
-          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
-          "backtest": {
-            "n": 0
-          },
-          "forward_bars": 5,
-          "entry": {},
-          "lookback": 20,
-          "summary": "日足が「確認下落 60%」= 売り圧力が続いている。様子見が無難 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
-        }
-      },
-      {
-        "code": "8053",
-        "name": "住友商事",
-        "market": "JP",
-        "ins_i": {
-          "symbol": "8053",
-          "timeframe": "intraday",
-          "dominant": "確認下落 (Bearish)",
-          "dominant_pct": 57,
-          "ofi_dir": "↑ 上昇",
-          "consecutive": 0,
-          "alert_n": 4,
-          "alert_trig": false,
-          "stealth_count": 165,
-          "base_rate": 10.3,
-          "false_exp": 0.04,
-          "n_reason": "発生率 10.3% → 連続4回の偽陽性期待値 0.04回/1日",
-          "backtest": {
-            "n": 144,
-            "win_rate": 26.4,
-            "avg_ret": -0.143,
-            "med_ret": -0.161
-          },
-          "forward_bars": 30,
-          "entry": {
-            "ofi_x": 28215.0,
-            "price_y": 0.26,
-            "n": 165
-          },
-          "lookback": 60,
-          "summary": "1分足が「確認下落 57%」= 売り圧力が続いている。様子見が無難 ／ ただし累積OFIは上昇中 → 価格下落中に買いが蓄積されている可能性（ステルス買い予兆） ／ ただし過去シグナル後30分後の勝率は26.4% と低め → 追加確認を推奨"
-        },
-        "ins_d": {
-          "symbol": "8053",
-          "timeframe": "daily",
-          "dominant": "分配売り (Distribution)",
-          "dominant_pct": 65,
-          "ofi_dir": "↓ 下落",
-          "consecutive": 0,
-          "alert_n": 3,
-          "alert_trig": false,
-          "stealth_count": 0,
-          "base_rate": 0.0,
-          "false_exp": 0.0,
-          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
-          "backtest": {
-            "n": 0
-          },
-          "forward_bars": 5,
-          "entry": {},
-          "lookback": 20,
-          "summary": "日足が「分配売り 65%」= 機関の売り逃げフェーズ。今は仕込みの時期ではない ／ 累積OFIも下落しており売り圧力を確認 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
-        }
-      }
-    ]
-  },
-  {
     "id": "20260716_0409",
     "timestamp": "2026-07-15T19:09:26.721266+00:00",
     "ts_display": "2026/07/16 04:09",
@@ -33071,6 +32740,337 @@
           },
           "lookback": 60,
           "summary": "1分足が「確認下落 55%」= 売り圧力が続いている。様子見が無難"
+        },
+        "ins_d": {
+          "symbol": "8053",
+          "timeframe": "daily",
+          "dominant": "分配売り (Distribution)",
+          "dominant_pct": 70,
+          "ofi_dir": "↓ 下落",
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "stealth_count": 0,
+          "base_rate": 0.0,
+          "false_exp": 0.0,
+          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20,
+          "summary": "日足が「分配売り 70%」= 機関の売り逃げフェーズ。今は仕込みの時期ではない ／ 累積OFIも下落しており売り圧力を確認 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
+        }
+      }
+    ]
+  },
+  {
+    "id": "20260721_1430",
+    "timestamp": "2026-07-21T05:30:05.426200+00:00",
+    "ts_display": "2026/07/21 14:30",
+    "stocks": [
+      {
+        "code": "MU",
+        "name": "マイクロン",
+        "market": "US",
+        "ins_i": {
+          "symbol": "MU",
+          "timeframe": "intraday",
+          "dominant": "確認下落 (Bearish)",
+          "dominant_pct": 80,
+          "ofi_dir": "↑ 上昇",
+          "consecutive": 0,
+          "alert_n": 4,
+          "alert_trig": false,
+          "stealth_count": 204,
+          "base_rate": 10.5,
+          "false_exp": 0.04,
+          "n_reason": "発生率 10.5% → 連続4回の偽陽性期待値 0.04回/1日",
+          "backtest": {
+            "n": 204,
+            "win_rate": 39.2,
+            "avg_ret": 0.2,
+            "med_ret": -0.237
+          },
+          "forward_bars": 30,
+          "entry": {
+            "ofi_x": 3144.0,
+            "price_y": 0.64,
+            "n": 204
+          },
+          "lookback": 60,
+          "summary": "1分足が「確認下落 80%」= 売り圧力が続いている。様子見が無難 ／ ただし累積OFIは上昇中 → 価格下落中に買いが蓄積されている可能性（ステルス買い予兆） ／ ただし過去シグナル後30分後の勝率は39.2% と低め → 追加確認を推奨"
+        },
+        "ins_d": {
+          "symbol": "MU",
+          "timeframe": "daily",
+          "dominant": "確認下落 (Bearish)",
+          "dominant_pct": 45,
+          "ofi_dir": "↓ 下落",
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "stealth_count": 0,
+          "base_rate": 0.0,
+          "false_exp": 0.0,
+          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20,
+          "summary": "日足で「確認下落 45%」= 弱め。まだ底打ちサインはない ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
+        }
+      },
+      {
+        "code": "285A",
+        "name": "キオクシア",
+        "market": "JP",
+        "ins_i": {
+          "symbol": "285A",
+          "timeframe": "intraday",
+          "dominant": "確認上昇 (Bullish)",
+          "dominant_pct": 80,
+          "ofi_dir": "↓ 下落",
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "stealth_count": 108,
+          "base_rate": 7.8,
+          "false_exp": 0.17,
+          "n_reason": "発生率 7.8% → 連続3回の偽陽性期待値 0.17回/1日",
+          "backtest": {
+            "n": 98,
+            "win_rate": 46.9,
+            "avg_ret": 0.195,
+            "med_ret": -0.007
+          },
+          "forward_bars": 30,
+          "entry": {
+            "ofi_x": 202968.0,
+            "price_y": 0.4,
+            "n": 108
+          },
+          "lookback": 60,
+          "summary": "1分足が「確認上昇 80%」= 素直な上昇トレンド。乗れるが出遅れ気味になりやすい ／ ただし累積OFIは下落中 → 価格上昇に売りが付いてきており、上昇の持続力に注意"
+        },
+        "ins_d": {
+          "symbol": "285A",
+          "timeframe": "daily",
+          "dominant": "確認下落 (Bearish)",
+          "dominant_pct": 85,
+          "ofi_dir": "↓ 下落",
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "stealth_count": 0,
+          "base_rate": 0.0,
+          "false_exp": 0.0,
+          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20,
+          "summary": "日足が「確認下落 85%」= 売り圧力が続いている。様子見が無難 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
+        }
+      },
+      {
+        "code": "1969",
+        "name": "高砂熱化学",
+        "market": "JP",
+        "ins_i": {
+          "symbol": "1969",
+          "timeframe": "intraday",
+          "dominant": "確認下落 (Bearish)",
+          "dominant_pct": 77,
+          "ofi_dir": "↓ 下落",
+          "consecutive": 0,
+          "alert_n": 4,
+          "alert_trig": false,
+          "stealth_count": 235,
+          "base_rate": 16.7,
+          "false_exp": 0.25,
+          "n_reason": "発生率 16.7% → 連続4回の偽陽性期待値 0.25回/1日",
+          "backtest": {
+            "n": 235,
+            "win_rate": 34.5,
+            "avg_ret": -0.161,
+            "med_ret": -0.148
+          },
+          "forward_bars": 30,
+          "entry": {
+            "ofi_x": 1600.0,
+            "price_y": 0.45,
+            "n": 235
+          },
+          "lookback": 60,
+          "summary": "1分足が「確認下落 77%」= 売り圧力が続いている。様子見が無難 ／ ただし過去シグナル後30分後の勝率は34.5% と低め → 追加確認を推奨"
+        },
+        "ins_d": {
+          "symbol": "1969",
+          "timeframe": "daily",
+          "dominant": "確認下落 (Bearish)",
+          "dominant_pct": 95,
+          "ofi_dir": "↓ 下落",
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "stealth_count": 0,
+          "base_rate": 0.0,
+          "false_exp": 0.0,
+          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20,
+          "summary": "日足が「確認下落 95%」= 売り圧力が続いている。様子見が無難 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
+        }
+      },
+      {
+        "code": "6503",
+        "name": "三菱電機",
+        "market": "JP",
+        "ins_i": {
+          "symbol": "6503",
+          "timeframe": "intraday",
+          "dominant": "確認上昇 (Bullish)",
+          "dominant_pct": 55,
+          "ofi_dir": "↑ 上昇",
+          "consecutive": 4,
+          "alert_n": 4,
+          "alert_trig": true,
+          "stealth_count": 184,
+          "base_rate": 12.0,
+          "false_exp": 0.07,
+          "n_reason": "発生率 12.0% → 連続4回の偽陽性期待値 0.07回/1日",
+          "backtest": {
+            "n": 180,
+            "win_rate": 56.1,
+            "avg_ret": 0.011,
+            "med_ret": 0.089
+          },
+          "forward_bars": 30,
+          "entry": {
+            "ofi_x": 24770.0,
+            "price_y": 0.25,
+            "n": 184
+          },
+          "lookback": 60,
+          "summary": "1分足が「確認上昇 55%」= 素直な上昇トレンド。乗れるが出遅れ気味になりやすい ／ ⚡ 連続4回のステルス買いアラート発動中 → 今すぐエントリー条件を確認して"
+        },
+        "ins_d": {
+          "symbol": "6503",
+          "timeframe": "daily",
+          "dominant": "分配売り (Distribution)",
+          "dominant_pct": 45,
+          "ofi_dir": "↓ 下落",
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "stealth_count": 0,
+          "base_rate": 0.0,
+          "false_exp": 0.0,
+          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20,
+          "summary": "日足で「分配売り 45%」= 売り圧力が散見される。慎重に ／ 累積OFIも下落しており売り圧力を確認 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
+        }
+      },
+      {
+        "code": "8002",
+        "name": "丸紅",
+        "market": "JP",
+        "ins_i": {
+          "symbol": "8002",
+          "timeframe": "intraday",
+          "dominant": "確認上昇 (Bullish)",
+          "dominant_pct": 100,
+          "ofi_dir": "↑ 上昇",
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "stealth_count": 137,
+          "base_rate": 8.9,
+          "false_exp": 0.25,
+          "n_reason": "発生率 8.9% → 連続3回の偽陽性期待値 0.25回/1日",
+          "backtest": {
+            "n": 137,
+            "win_rate": 69.3,
+            "avg_ret": 0.067,
+            "med_ret": 0.223
+          },
+          "forward_bars": 30,
+          "entry": {
+            "ofi_x": 8645.0,
+            "price_y": 0.33,
+            "n": 136
+          },
+          "lookback": 60,
+          "summary": "1分足が「確認上昇 100%」= 素直な上昇トレンド。乗れるが出遅れ気味になりやすい ／ 過去データでは同シグナル後30分後の勝率が69.3% / 平均+0.07% → 精度は良好"
+        },
+        "ins_d": {
+          "symbol": "8002",
+          "timeframe": "daily",
+          "dominant": "確認上昇 (Bullish)",
+          "dominant_pct": 50,
+          "ofi_dir": "↓ 下落",
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "stealth_count": 0,
+          "base_rate": 0.0,
+          "false_exp": 0.0,
+          "n_reason": "発生率 0.0% → 連続3回の偽陽性期待値 0.00回/1年",
+          "backtest": {
+            "n": 0
+          },
+          "forward_bars": 5,
+          "entry": {},
+          "lookback": 20,
+          "summary": "日足が「確認上昇 50%」= 素直な上昇トレンド。乗れるが出遅れ気味になりやすい ／ ただし累積OFIは下落中 → 価格上昇に売りが付いてきており、上昇の持続力に注意 ／ ステルス買いシグナルの発生率は 0.0% とほぼゼロ → 機関の仕込みは確認できていない"
+        }
+      },
+      {
+        "code": "8053",
+        "name": "住友商事",
+        "market": "JP",
+        "ins_i": {
+          "symbol": "8053",
+          "timeframe": "intraday",
+          "dominant": "確認上昇 (Bullish)",
+          "dominant_pct": 62,
+          "ofi_dir": "↑ 上昇",
+          "consecutive": 0,
+          "alert_n": 3,
+          "alert_trig": false,
+          "stealth_count": 134,
+          "base_rate": 8.7,
+          "false_exp": 0.24,
+          "n_reason": "発生率 8.7% → 連続3回の偽陽性期待値 0.24回/1日",
+          "backtest": {
+            "n": 134,
+            "win_rate": 41.0,
+            "avg_ret": -0.131,
+            "med_ret": -0.142
+          },
+          "forward_bars": 30,
+          "entry": {
+            "ofi_x": 37260.0,
+            "price_y": 0.22,
+            "n": 134
+          },
+          "lookback": 60,
+          "summary": "1分足が「確認上昇 62%」= 素直な上昇トレンド。乗れるが出遅れ気味になりやすい"
         },
         "ins_d": {
           "symbol": "8053",
